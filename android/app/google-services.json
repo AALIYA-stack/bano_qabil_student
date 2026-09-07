@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "990952892848",
+    "project_id": "bano-qabil-student",
+    "storage_bucket": "bano-qabil-student.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:990952892848:android:23e244e73906a408c08e75",
+        "android_client_info": {
+          "package_name": "com.example.bano_qabil_student"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfqHTPFcSn2OYcXLeCID_kIekrOYDfcvg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
