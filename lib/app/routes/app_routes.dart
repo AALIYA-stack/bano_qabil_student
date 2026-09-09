@@ -3,86 +3,58 @@ import 'package:flutter/material.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
-import '../../features/student/class/screen/my_classes_screen.dart';
-import '../../features/student/student_shell.dart';
-
-class AppRoutes {
-AppRoutes._();
-
-// ============================================================
-// ROUTE NAMES
-// ============================================================
-
-static const String splash = '/';
-static const String login = '/login';
-static const String register = '/register';
 
 // Student
-static const String studentHome = '/student-home';
-static const String myClasses = '/my-classes';
+import '../../features/student/student_shell.dart';
+import '../../features/student/class/screen/my_classes_screen.dart';
 
-// Future roles
-static const String instructorHome = '/instructor-home';
-static const String coordinatorDashboard =
-'/coordinator-dashboard';
+// Instructor
+import '../../features/instructor/screens/instructor_home_screen.dart';
 
-// ============================================================
-// ROUTES
-// ============================================================
+class AppRoutes {
+  AppRoutes._();
 
-static Map<String, WidgetBuilder> get routes {
-return {
-// ----------------------------------------------------------
-// Splash
-// ----------------------------------------------------------
-splash: (context) => const SplashScreen(),
+  // =========================
+  // Route Names
+  // =========================
 
-// ----------------------------------------------------------
-// Authentication
-// ----------------------------------------------------------
-login: (context) => const LoginScreen(),
+  static const String splash = '/';
+  static const String login = '/login';
+  static const String register = '/register';
 
-register: (context) => const RegisterScreen(),
+  // Student
+  static const String studentHome = '/student-home';
+  static const String myClasses = '/my-classes';
 
-// ----------------------------------------------------------
-// STUDENT SHELL
-// ----------------------------------------------------------
-//
-// Firebase login ke baad Student ko complete app shell milega:
-//
-// Home
-// Courses
-// Classes
-// Assignments
-// Progress
-// Profile
-//
-studentHome: (context) => const StudentShell(),
+  // Instructor
+  static const String instructorHome = '/instructor-home';
 
-// ----------------------------------------------------------
-// STUDENT MY CLASSES
-// ----------------------------------------------------------
-myClasses: (context) => const MyClassesScreen(),
+  // Coordinator
+  static const String coordinatorDashboard =
+      '/coordinator-dashboard';
 
-// ----------------------------------------------------------
-// INSTRUCTOR
-// ----------------------------------------------------------
-//
-// Actual Instructor screen ready hone ke baad yahan route
-// register karenge.
-//
-// instructorHome: (context) => const InstructorHomeScreen(),
+  // =========================
+  // Routes
+  // =========================
 
-// ----------------------------------------------------------
-// COORDINATOR
-// ----------------------------------------------------------
-//
-// Actual Coordinator screen ready hone ke baad yahan route
-// register karenge.
-//
-// coordinatorDashboard:
-//     (context) => const CoordinatorDashboardScreen(),
-};
+  static Map<String, WidgetBuilder> get routes {
+    return {
+      // Auth
+      splash: (context) => const SplashScreen(),
+      login: (context) => const LoginScreen(),
+      register: (context) => const RegisterScreen(),
+
+      // Student
+      studentHome: (context) => const StudentShell(),
+      myClasses: (context) => const MyClassesScreen(),
+
+      // Instructor
+      instructorHome: (context) =>
+      const InstructorHomeScreen(),
+
+      // Coordinator
+      // coordinatorDashboard: (context) =>
+      //     const CoordinatorDashboardScreen(),
+    };
+  }
 }
-}
-
