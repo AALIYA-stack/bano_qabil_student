@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../services/auth_service.dart';
+import '../../../models/user_model.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_dimensions.dart';
@@ -25,29 +26,22 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
     _loadInstructorProfile();
   }
 
-  Future<void> _loadInstructorProfile() async {
-    try {
-      final DocumentSnapshot<Map<String, dynamic>>? profile =
-          await AuthService.instance.getCurrentUserProfile();
+Future<void> _loadInstructorProfile() async {
+  try {
+    final UserModel? profile =
+        await AuthService.instance.getCurrentUserProfile();
 
-      if (!mounted || profile == null || !profile.exists) {
-        return;
-      }
-
-      final data = profile.data();
-
-      if (data == null) {
-        return;
-      }
-
-      setState(() {
-        _instructorName =
-            (data['name'] ?? 'Instructor').toString().trim();
-      });
-    } catch (e) {
-      // Keep the default name if the profile cannot be loaded.
+    if (!mounted || profile == null) {
+      return;
     }
+
+    setState(() {
+      _instructorName = profile.name.trim();
+    });
+  } catch (e) {
+    // Keep the default name if the profile cannot be loaded.
   }
+}
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTodayClasses() {
     final user = AuthService.instance.currentUser;
