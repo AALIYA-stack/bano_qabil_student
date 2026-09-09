@@ -222,7 +222,7 @@ class _NoticesScreenState
                 Axis.horizontal,
                 itemCount: _filters.length,
                 separatorBuilder:
-                    (_, __) =>
+                    (_, _) =>
                 const SizedBox(
                   width: 8,
                 ),

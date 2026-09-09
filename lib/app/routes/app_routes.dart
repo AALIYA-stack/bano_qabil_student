@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
-
 import '../../features/student/class/screen/my_classes_screen.dart';
 import '../../features/student/student_shell.dart';
 
@@ -33,23 +32,23 @@ static const String coordinatorDashboard =
 
 static Map<String, WidgetBuilder> get routes {
 return {
-// --------------------------------------------------------
+// ----------------------------------------------------------
 // Splash
-// --------------------------------------------------------
+// ----------------------------------------------------------
 splash: (context) => const SplashScreen(),
 
-// --------------------------------------------------------
+// ----------------------------------------------------------
 // Authentication
-// --------------------------------------------------------
+// ----------------------------------------------------------
 login: (context) => const LoginScreen(),
 
 register: (context) => const RegisterScreen(),
 
-// --------------------------------------------------------
+// ----------------------------------------------------------
 // STUDENT SHELL
-// --------------------------------------------------------
+// ----------------------------------------------------------
 //
-// Login ke baad student ko complete shell milega:
+// Firebase login ke baad Student ko complete app shell milega:
 //
 // Home
 // Courses
@@ -60,10 +59,30 @@ register: (context) => const RegisterScreen(),
 //
 studentHome: (context) => const StudentShell(),
 
-// --------------------------------------------------------
-// Student My Classes
-// --------------------------------------------------------
+// ----------------------------------------------------------
+// STUDENT MY CLASSES
+// ----------------------------------------------------------
 myClasses: (context) => const MyClassesScreen(),
+
+// ----------------------------------------------------------
+// INSTRUCTOR
+// ----------------------------------------------------------
+//
+// Actual Instructor screen ready hone ke baad yahan route
+// register karenge.
+//
+// instructorHome: (context) => const InstructorHomeScreen(),
+
+// ----------------------------------------------------------
+// COORDINATOR
+// ----------------------------------------------------------
+//
+// Actual Coordinator screen ready hone ke baad yahan route
+// register karenge.
+//
+// coordinatorDashboard:
+//     (context) => const CoordinatorDashboardScreen(),
 };
 }
 }
+

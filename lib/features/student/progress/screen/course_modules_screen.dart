@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
 import '../../../../models/course_module_model.dart';
 import '../../../../models/module_progress_model.dart';
 import '../../../../services/module_service.dart';
-
 class CourseModulesScreen
     extends StatefulWidget {
   final String courseId;
-
   const CourseModulesScreen({
     super.key,
     required this.courseId,
