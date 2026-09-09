@@ -4,49 +4,50 @@ import '../../features/instructor/screens/instructor_home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
-import '../../features/student/my_classes_screen.dart';
-import '../../features/student/student_dashboard_screen.dart';
+import '../../features/student/class/screen/my_classes_screen.dart';
+import '../../features/student/home/student_home.dart';
 
 class AppRoutes {
-AppRoutes._();
+  AppRoutes._();
 
-// =========================
-// ROUTE NAMES
-// =========================
+  // =========================
+  // ROUTE NAMES
+  // =========================
 
-static const String splash = '/';
-static const String login = '/login';
-static const String register = '/register';
+  static const String splash = '/';
+  static const String login = '/login';
+  static const String register = '/register';
 
-static const String studentHome = '/student-home';
-static const String myClasses = '/my-classes';
+  static const String studentHome = '/student-home';
+  static const String myClasses = '/my-classes';
 
-// Future roles
-static const String instructorHome = '/instructor-home';
-static const String coordinatorDashboard =
-'/coordinator-dashboard';
+  // Future roles
+  static const String instructorHome = '/instructor-home';
+  static const String coordinatorDashboard =
+      '/coordinator-dashboard';
 
-// =========================
-// ROUTES
-// =========================
+  // =========================
+  // ROUTES
+  // =========================
 
-static Map<String, WidgetBuilder> get routes {
-return {
-splash: (context) => const SplashScreen(),
+  static Map<String, WidgetBuilder> get routes {
+    return {
+      // Splash
+      splash: (context) => const SplashScreen(),
 
-login: (context) => const LoginScreen(),
+      // Authentication
+      login: (context) => const LoginScreen(),
+      register: (context) => const RegisterScreen(),
 
-register: (context) => const RegisterScreen(),
+      // Student Dashboard
+      studentHome: (context) => const StudentHomeScreen(),
 
-// Student Dashboard
-studentHome: (context) =>
-const StudentDashboardScreen(),
+      // Student My Classes
+      myClasses: (context) => const MyClassesScreen(),
 
-// Student My Classes
-myClasses: (context) =>
-const MyClassesScreen(),
-instructorHome: (context) => const InstructorHomeScreen(),
-};
-}
+      // Instructor Dashboard
+      instructorHome: (context) => const InstructorHomeScreen(),
+    };
+  }
 }
 

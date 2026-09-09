@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/app_colors.dart';
-import '../../../app/theme/app_dimensions.dart';
-import '../../../app/theme/app_text_styles.dart';
+import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/app_dimensions.dart';
+import '../../../../../app/theme/app_text_styles.dart';
 
 class MyClassesScreen extends StatefulWidget {
 const MyClassesScreen({super.key});
