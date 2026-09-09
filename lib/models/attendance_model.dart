@@ -19,21 +19,91 @@ class AttendanceModel {
     this.createdAt,
   });
 
+  // ============================================================
+  // FROM FIRESTORE
+  // ============================================================
+
   factory AttendanceModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc,
       ) {
-    final data = doc.data() ?? {};
+    final Map<String, dynamic> data =
+        doc.data() ?? {};
 
     return AttendanceModel(
       id: doc.id,
-      studentId: data['studentId']?.toString() ?? '',
-      batchId: data['batchId']?.toString() ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      status: data['status']?.toString() ?? 'absent',
-      markedBy: data['markedBy']?.toString() ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+
+      studentId:
+      data['studentId']?.toString() ?? '',
+
+      batchId:
+      data['batchId']?.toString() ?? '',
+
+      date: _parseDate(
+        data['date'],
+      ),
+
+      status:
+      data['status']?.toString().toLowerCase() ??
+          'absent',
+
+      markedBy:
+      data['markedBy']?.toString() ?? '',
+
+      createdAt:
+      _parseNullableDate(
+        data['createdAt'],
+      ),
     );
   }
+
+  // ============================================================
+  // DATE PARSER
+  // ============================================================
+
+  static DateTime _parseDate(
+      dynamic value,
+      ) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    if (value is String) {
+      final parsed =
+      DateTime.tryParse(value);
+
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    return DateTime.now();
+  }
+
+  static DateTime? _parseNullableDate(
+      dynamic value,
+      ) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+
+    return null;
+  }
+
+  // ============================================================
+  // TO FIRESTORE
+  // ============================================================
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -48,11 +118,22 @@ class AttendanceModel {
     };
   }
 
-  bool get isPresent => status == 'present';
+  // ============================================================
+  // STATUS HELPERS
+  // ============================================================
 
-  bool get isAbsent => status == 'absent';
+  bool get isPresent =>
+      status.toLowerCase() == 'present';
 
-  bool get isLeave => status == 'leave';
+  bool get isAbsent =>
+      status.toLowerCase() == 'absent';
 
-  bool get isLate => status == 'late';
+  bool get isLeave =>
+      status.toLowerCase() == 'leave';
+
+  bool get isLate =>
+      status.toLowerCase() == 'late';
+
+  bool get isAttended =>
+      isPresent || isLate;
 }

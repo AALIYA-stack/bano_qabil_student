@@ -17,6 +17,7 @@ class CollectionNames {
 
   static const String careerProgress =
       'career_progress';
+
   static const String moduleProgress =
       'module_progress';
 }

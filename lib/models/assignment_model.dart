@@ -27,25 +27,76 @@ class AssignmentModel {
     required this.isQuiz,
   });
 
+  // ============================================================
+  // FROM FIRESTORE
+  // ============================================================
+
   factory AssignmentModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc,
       ) {
-    final data = doc.data() ?? {};
+    final Map<String, dynamic> data =
+        doc.data() ?? {};
 
     return AssignmentModel(
       id: doc.id,
-      batchId: data['batchId']?.toString() ?? '',
-      courseId: data['courseId']?.toString() ?? '',
-      title: data['title']?.toString() ?? '',
-      description: data['description']?.toString() ?? '',
-      instructions: data['instructions']?.toString() ?? '',
-      dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
-      totalMarks: (data['totalMarks'] as num?)?.toInt() ?? 100,
-      createdBy: data['createdBy']?.toString() ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      isQuiz: data['isQuiz'] as bool? ?? false,
+
+      batchId:
+      data['batchId']?.toString() ?? '',
+
+      courseId:
+      data['courseId']?.toString() ?? '',
+
+      title:
+      data['title']?.toString() ?? '',
+
+      description:
+      data['description']?.toString() ?? '',
+
+      instructions:
+      data['instructions']?.toString() ?? '',
+
+      dueDate:
+      _parseDate(data['dueDate']),
+
+      totalMarks:
+      (data['totalMarks'] as num?)?.toInt() ?? 100,
+
+      createdBy:
+      data['createdBy']?.toString() ?? '',
+
+      createdAt:
+      _parseDate(data['createdAt']),
+
+      isQuiz:
+      data['isQuiz'] as bool? ?? false,
     );
   }
+
+  // ============================================================
+  // DATE PARSER
+  // ============================================================
+
+  static DateTime? _parseDate(
+      dynamic value,
+      ) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+
+    return null;
+  }
+
+  // ============================================================
+  // TO FIRESTORE
+  // ============================================================
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -54,20 +105,30 @@ class AssignmentModel {
       'title': title,
       'description': description,
       'instructions': instructions,
+
       'dueDate': dueDate == null
           ? null
           : Timestamp.fromDate(dueDate!),
+
       'totalMarks': totalMarks,
       'createdBy': createdBy,
+
       'createdAt': createdAt == null
           ? FieldValue.serverTimestamp()
           : Timestamp.fromDate(createdAt!),
+
       'isQuiz': isQuiz,
     };
   }
 
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
   bool get isPastDue {
-    if (dueDate == null) return false;
+    if (dueDate == null) {
+      return false;
+    }
 
     return DateTime.now().isAfter(dueDate!);
   }

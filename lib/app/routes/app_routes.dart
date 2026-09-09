@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// Auth
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
@@ -14,9 +15,9 @@ import '../../features/instructor/screens/instructor_home_screen.dart';
 class AppRoutes {
   AppRoutes._();
 
-  // =========================
-  // Route Names
-  // =========================
+  // ============================================================
+  // ROUTE NAMES
+  // ============================================================
 
   static const String splash = '/';
   static const String login = '/login';
@@ -33,26 +34,41 @@ class AppRoutes {
   static const String coordinatorDashboard =
       '/coordinator-dashboard';
 
-  // =========================
-  // Routes
-  // =========================
+  // ============================================================
+  // ROUTES
+  // ============================================================
 
   static Map<String, WidgetBuilder> get routes {
     return {
-      // Auth
+      // ----------------------------------------------------------
+      // AUTH
+      // ----------------------------------------------------------
+
       splash: (context) => const SplashScreen(),
+
       login: (context) => const LoginScreen(),
+
       register: (context) => const RegisterScreen(),
 
-      // Student
+      // ----------------------------------------------------------
+      // STUDENT
+      // ----------------------------------------------------------
+
       studentHome: (context) => const StudentShell(),
+
       myClasses: (context) => const MyClassesScreen(),
 
-      // Instructor
+      // ----------------------------------------------------------
+      // INSTRUCTOR
+      // ----------------------------------------------------------
+
       instructorHome: (context) =>
       const InstructorHomeScreen(),
 
-      // Coordinator
+      // ----------------------------------------------------------
+      // COORDINATOR
+      // ----------------------------------------------------------
+
       // coordinatorDashboard: (context) =>
       //     const CoordinatorDashboardScreen(),
     };

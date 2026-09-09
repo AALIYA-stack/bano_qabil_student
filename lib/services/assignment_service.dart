@@ -12,6 +12,10 @@ class AssignmentService {
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
+  // ============================================================
+  // ASSIGNMENTS COLLECTION
+  // ============================================================
+
   CollectionReference<Map<String, dynamic>>
   get _assignments {
     return _firestore.collection(
@@ -19,65 +23,88 @@ class AssignmentService {
     );
   }
 
+  // ============================================================
+  // GET ASSIGNMENTS FOR BATCH
+  // ============================================================
+
   Future<List<AssignmentModel>>
   getAssignmentsForBatch(
       String batchId,
       ) async {
-    if (batchId.trim().isEmpty) {
+    final String trimmedBatchId =
+    batchId.trim();
+
+    if (trimmedBatchId.isEmpty) {
       return [];
     }
 
-    final snapshot =
+    final QuerySnapshot<
+        Map<String, dynamic>> snapshot =
     await _assignments
         .where(
       'batchId',
-      isEqualTo: batchId,
+      isEqualTo: trimmedBatchId,
     )
         .get();
 
-    final assignments =
+    final List<AssignmentModel> assignments =
     snapshot.docs
         .map(
           (doc) =>
-          AssignmentModel
-              .fromFirestore(doc),
+          AssignmentModel.fromFirestore(
+            doc,
+          ),
     )
         .toList();
 
-    assignments.sort((a, b) {
-      final aDate = a.dueDate;
-      final bDate = b.dueDate;
+    // Newest due date / nearest due date first
+    assignments.sort(
+          (a, b) {
+        final DateTime? aDate =
+            a.dueDate;
 
-      if (aDate == null &&
-          bDate == null) {
-        return 0;
-      }
+        final DateTime? bDate =
+            b.dueDate;
 
-      if (aDate == null) {
-        return 1;
-      }
+        if (aDate == null &&
+            bDate == null) {
+          return 0;
+        }
 
-      if (bDate == null) {
-        return -1;
-      }
+        if (aDate == null) {
+          return 1;
+        }
 
-      return aDate.compareTo(bDate);
-    });
+        if (bDate == null) {
+          return -1;
+        }
+
+        return aDate.compareTo(bDate);
+      },
+    );
 
     return assignments;
   }
+
+  // ============================================================
+  // GET SINGLE ASSIGNMENT
+  // ============================================================
 
   Future<AssignmentModel?>
   getAssignmentById(
       String assignmentId,
       ) async {
-    if (assignmentId.trim().isEmpty) {
+    final String trimmedId =
+    assignmentId.trim();
+
+    if (trimmedId.isEmpty) {
       return null;
     }
 
-    final doc =
+    final DocumentSnapshot<
+        Map<String, dynamic>> doc =
     await _assignments
-        .doc(assignmentId)
+        .doc(trimmedId)
         .get();
 
     if (!doc.exists) {
