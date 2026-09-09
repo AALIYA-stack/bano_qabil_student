@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
-import '../../features/student/my_classes_screen.dart';
-import '../../features/student/student_dashboard_screen.dart';
+import '../../features/student/class/screen/my_classes_screen.dart';
+import '../../features/student/home/student_home.dart';
 
 class AppRoutes {
 AppRoutes._();
@@ -31,19 +31,19 @@ static const String coordinatorDashboard =
 
 static Map<String, WidgetBuilder> get routes {
 return {
+// Splash
 splash: (context) => const SplashScreen(),
 
+// Authentication
 login: (context) => const LoginScreen(),
 
 register: (context) => const RegisterScreen(),
 
 // Student Dashboard
-studentHome: (context) =>
-const StudentDashboardScreen(),
+studentHome: (context) => const StudentHomeScreen(),
 
 // Student My Classes
-myClasses: (context) =>
-const MyClassesScreen(),
+myClasses: (context) => const MyClassesScreen(),
 };
 }
 }
