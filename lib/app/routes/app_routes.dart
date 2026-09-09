@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../features/instructor/screens/instructor_home_screen.dart';
 
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
@@ -44,6 +45,7 @@ const StudentDashboardScreen(),
 // Student My Classes
 myClasses: (context) =>
 const MyClassesScreen(),
+instructorHome: (context) => const InstructorHomeScreen(),
 };
 }
 }
