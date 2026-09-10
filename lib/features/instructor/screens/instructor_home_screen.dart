@@ -8,6 +8,10 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_dimensions.dart';
 import '../../../app/theme/app_text_styles.dart';
 
+import '../../student/attendence/screen/attendance_screen.dart';
+import 'create_assignment_screen.dart';
+import 'instructor_submissions_screen.dart';
+
 class InstructorHomeScreen extends StatefulWidget {
   const InstructorHomeScreen({super.key});
 
@@ -26,22 +30,22 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
     _loadInstructorProfile();
   }
 
-Future<void> _loadInstructorProfile() async {
-  try {
-    final UserModel? profile =
-        await AuthService.instance.getCurrentUserProfile();
+  Future<void> _loadInstructorProfile() async {
+    try {
+      final UserModel? profile =
+          await AuthService.instance.getCurrentUserProfile();
 
-    if (!mounted || profile == null) {
-      return;
+      if (!mounted || profile == null) {
+        return;
+      }
+
+      setState(() {
+        _instructorName = profile.name.trim();
+      });
+    } catch (e) {
+      // Keep the default name if the profile cannot be loaded.
     }
-
-    setState(() {
-      _instructorName = profile.name.trim();
-    });
-  } catch (e) {
-    // Keep the default name if the profile cannot be loaded.
   }
-}
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTodayClasses() {
     final user = AuthService.instance.currentUser;
@@ -57,31 +61,18 @@ Future<void> _loadInstructorProfile() async {
         .snapshots();
   }
 
-  final List<Map<String, dynamic>> _pendingSubmissions = [
-    {
-      'student': 'Ali Raza',
-      'assignment': 'Flutter UI Assignment',
-      'batch': 'Flutter Batch 01',
-    },
-    {
-      'student': 'Sara Ahmed',
-      'assignment': 'Firebase Quiz',
-      'batch': 'Flutter Batch 01',
-    },
-  ];
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getPendingSubmissions() {
+    return FirebaseFirestore.instance
+        .collection('submissions')
+        .where('status', isEqualTo: 'submitted')
+        .snapshots();
+  }
 
-  final List<Map<String, dynamic>> _behindStudents = [
-    {
-      'student': 'Ahmed Khan',
-      'batch': 'Flutter Batch 01',
-      'progress': '45%',
-    },
-    {
-      'student': 'Fatima Noor',
-      'batch': 'Flutter Batch 01',
-      'progress': '52%',
-    },
-  ];
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getBehindStudents() {
+    return FirebaseFirestore.instance
+        .collection('students')
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -278,12 +269,155 @@ Future<void> _loadInstructorProfile() async {
           _buildSectionHeader(
             title: 'Pending Submissions',
             actionText: 'View All',
-            onActionPressed: () {},
+            onActionPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const InstructorSubmissionsScreen(),
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: AppDimensions.spacingMedium),
 
-          ..._pendingSubmissions.map(_buildSubmissionCard),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _getPendingSubmissions(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: AppDimensions.paddingLarge,
+                  ),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingMedium,
+                    ),
+                    child: Text(
+                      'Unable to load submissions.',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                );
+              }
+
+              final submissions = snapshot.data?.docs ?? [];
+
+              if (submissions.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingLarge,
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.assignment_turned_in_outlined,
+                          size: AppDimensions.iconXLarge,
+                          color: AppColors.textLight,
+                        ),
+                        const SizedBox(
+                          height: AppDimensions.spacingSmall,
+                        ),
+                        Text(
+                          'No pending submissions.',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: submissions.map((doc) {
+                  final data = doc.data();
+
+                  return FutureBuilder<
+                      List<DocumentSnapshot<Map<String, dynamic>>>>(
+                    future: Future.wait([
+                      FirebaseFirestore.instance
+                          .collection('assignments')
+                          .doc(data['assignmentId'])
+                          .get(),
+                      FirebaseFirestore.instance
+                          .collection('applications')
+                          .where(
+                            'studentId',
+                            isEqualTo: data['studentId'],
+                          )
+                          .limit(1)
+                          .get()
+                          .then(
+                            (snapshot) =>
+                                snapshot.docs.isNotEmpty
+                                    ? snapshot.docs.first
+                                    : FirebaseFirestore.instance
+                                        .collection('applications')
+                                        .doc('_not_found_')
+                                        .get(),
+                          ),
+                    ]),
+                    builder: (context, relatedSnapshot) {
+                      if (relatedSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppDimensions.paddingSmall,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      if (relatedSnapshot.hasError ||
+                          !relatedSnapshot.hasData) {
+                        return _buildSubmissionCard({
+                          'student': 'Student',
+                          'assignment': 'Assignment',
+                          'batch': 'Batch',
+                        });
+                      }
+
+                      final assignment =
+                          relatedSnapshot.data![0].data();
+
+                      final application =
+                          relatedSnapshot.data![1].data();
+
+                      final instructorId =
+                          AuthService.instance.currentUser?.uid;
+
+                      if (assignment == null ||
+                          assignment['instructorId'] !=
+                              instructorId) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return _buildSubmissionCard({
+                        'student':
+                            application?['fullName'] ?? 'Student',
+                        'assignment':
+                            assignment['title'] ?? 'Assignment',
+                        'batch':
+                            assignment['flutter'] ?? 'Batch',
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
 
           const SizedBox(height: AppDimensions.spacingLarge),
 
@@ -295,7 +429,143 @@ Future<void> _loadInstructorProfile() async {
 
           const SizedBox(height: AppDimensions.spacingMedium),
 
-          ..._behindStudents.map(_buildProgressCard),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _getBehindStudents(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: AppDimensions.paddingLarge,
+                  ),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingMedium,
+                    ),
+                    child: Text(
+                      'Unable to load student progress.',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                );
+              }
+
+              final studentDocs = snapshot.data?.docs ?? [];
+
+              if (studentDocs.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingLarge,
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.people_outline_rounded,
+                          size: AppDimensions.iconXLarge,
+                          color: AppColors.textLight,
+                        ),
+                        const SizedBox(
+                          height: AppDimensions.spacingSmall,
+                        ),
+                        Text(
+                          'No student progress found.',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: studentDocs.map((studentDoc) {
+                  final studentData = studentDoc.data();
+
+                  final uid =
+                      (studentData['uid'] ?? '').toString();
+
+                  final completed = int.tryParse(
+                        (studentData['completedAssignments'] ?? '0')
+                            .toString(),
+                      ) ??
+                      0;
+
+                  final total = int.tryParse(
+                        (studentData['totalAssignments'] ?? '0')
+                            .toString(),
+                      ) ??
+                      0;
+
+                  if (total <= 0) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final progress = completed / total;
+
+                  // Show students whose assignment progress is below 60%.
+                  if (progress >= 0.60) {
+                    return const SizedBox.shrink();
+                  }
+
+                  if (uid.isEmpty) {
+                    return _buildProgressCard({
+                      'student': 'Student',
+                      'batch': 'Batch',
+                      'progress':
+                          '${(progress * 100).round()}%',
+                    });
+                  }
+
+                  return FutureBuilder<
+                      DocumentSnapshot<Map<String, dynamic>>>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(uid)
+                        .get(),
+                    builder: (context, userSnapshot) {
+                      if (userSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppDimensions.paddingSmall,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      final userData =
+                          userSnapshot.data?.data();
+
+                      final studentName =
+                          (userData?['name'] ?? 'Student')
+                              .toString();
+
+                      final batch =
+                          (userData?['batchid'] ?? 'Batch')
+                              .toString();
+
+                      return _buildProgressCard({
+                        'student': studentName,
+                        'batch': batch,
+                        'progress':
+                            '${(progress * 100).round()}%',
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
 
           const SizedBox(height: AppDimensions.spacingLarge),
         ],
@@ -488,12 +758,26 @@ Future<void> _loadInstructorProfile() async {
         _buildActionCard(
           icon: Icons.fact_check_outlined,
           title: 'Attendance',
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AttendanceScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           icon: Icons.add_task_rounded,
           title: 'Assignment',
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CreateAssignmentScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           icon: Icons.campaign_outlined,
@@ -655,3 +939,4 @@ Future<void> _loadInstructorProfile() async {
     );
   }
 }
+
