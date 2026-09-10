@@ -31,67 +31,85 @@ class SubmissionModel {
     required this.markedBy,
   });
 
+  // ============================================================
+  // FROM FIRESTORE
+  // ============================================================
+
   factory SubmissionModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc,
       ) {
-    final data = doc.data() ?? {};
-
-    DateTime? submittedAt;
-    DateTime? markedAt;
-
-    final submittedValue =
-    data['submittedAt'];
-
-    final markedValue =
-    data['markedAt'];
-
-    if (submittedValue is Timestamp) {
-      submittedAt =
-          submittedValue.toDate();
-    }
-
-    if (markedValue is Timestamp) {
-      markedAt =
-          markedValue.toDate();
-    }
+    final Map<String, dynamic> data =
+        doc.data() ?? {};
 
     return SubmissionModel(
       id: doc.id,
+
       assignmentId:
-      data['assignmentId']
-          ?.toString() ??
-          '',
+      data['assignmentId']?.toString() ?? '',
+
       studentId:
-      data['studentId']
-          ?.toString() ??
-          '',
+      data['studentId']?.toString() ?? '',
+
       batchId:
-      data['batchId']
-          ?.toString() ??
-          '',
+      data['batchId']?.toString() ?? '',
+
       answerText:
-      data['answerText']
-          ?.toString() ??
-          '',
+      data['answerText']?.toString() ?? '',
+
       fileUrl:
       data['fileUrl']?.toString(),
+
       fileName:
       data['fileName']?.toString(),
+
       status:
       data['status']
-          ?.toString() ??
+          ?.toString()
+          .toLowerCase() ??
           'submitted',
-      submittedAt: submittedAt,
+
+      submittedAt:
+      _parseDate(data['submittedAt']),
+
       marks:
-      (data['marks'] as num?)
-          ?.toInt(),
+      (data['marks'] as num?)?.toInt(),
+
       feedback:
       data['feedback']?.toString(),
-      markedAt: markedAt,
+
+      markedAt:
+      _parseDate(data['markedAt']),
+
       markedBy:
       data['markedBy']?.toString(),
     );
   }
+
+  // ============================================================
+  // DATE PARSER
+  // ============================================================
+
+  static DateTime? _parseDate(
+      dynamic value,
+      ) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+
+    return null;
+  }
+
+  // ============================================================
+  // TO FIRESTORE
+  // ============================================================
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -102,21 +120,29 @@ class SubmissionModel {
       'fileUrl': fileUrl,
       'fileName': fileName,
       'status': status,
+
       'submittedAt': submittedAt == null
           ? FieldValue.serverTimestamp()
           : Timestamp.fromDate(
         submittedAt!,
       ),
+
       'marks': marks,
       'feedback': feedback,
+
       'markedAt': markedAt == null
           ? null
           : Timestamp.fromDate(
         markedAt!,
       ),
+
       'markedBy': markedBy,
     };
   }
+
+  // ============================================================
+  // STATUS HELPERS
+  // ============================================================
 
   bool get isSubmitted {
     return status == 'submitted' ||
@@ -130,5 +156,9 @@ class SubmissionModel {
 
   bool get isLate {
     return status == 'late';
+  }
+
+  bool get isPending {
+    return !isSubmitted;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
 import '../../../../core/widgets/loading_widget.dart';
@@ -19,11 +20,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final AuthService _authService =
-      AuthService.instance;
+  final AuthService _authService = AuthService.instance;
 
-  final ImagePicker _imagePicker =
-  ImagePicker();
+  final ImagePicker _imagePicker = ImagePicker();
 
   UserModel? _user;
 
@@ -40,11 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
 
-    _nameController =
-        TextEditingController();
-
-    _cityController =
-        TextEditingController();
+    _nameController = TextEditingController();
+    _cityController = TextEditingController();
 
     _loadProfile();
   }
@@ -62,9 +58,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      final user =
-      await _authService
-          .getCurrentUserProfile();
+      final UserModel? user =
+      await _authService.getCurrentUserProfile();
 
       if (!mounted) return;
 
@@ -100,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_isUploadingPhoto) return;
 
     try {
-      final image =
+      final XFile? image =
       await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,
@@ -118,11 +113,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isUploadingPhoto = true;
       });
 
-      final bytes =
-      await image.readAsBytes();
+      final bytes = await image.readAsBytes();
 
-      final currentUser =
-          _authService.currentUser;
+      final currentUser = _authService.currentUser;
 
       if (currentUser == null) {
         throw Exception(
@@ -130,9 +123,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      final photoUrl =
-      await StorageService.instance
-          .uploadProfilePhoto(
+      final String photoUrl =
+      await StorageService.instance.uploadProfilePhoto(
         uid: currentUser.uid,
         imageBytes: bytes,
       );
@@ -141,9 +133,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         photoUrl,
       );
 
-      final updatedUser =
-      await _authService
-          .getCurrentUserProfile();
+      final UserModel? updatedUser =
+      await _authService.getCurrentUserProfile();
 
       if (!mounted) return;
 
@@ -153,13 +144,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Profile photo updated successfully.',
-          ),
-        ),
+      _showMessage(
+        'Profile photo updated successfully.',
       );
     } catch (e) {
       if (!mounted) return;
@@ -180,32 +166,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // SAVE PROFILE
   // ============================================================
 
-  Future<void> _saveProfile() async {
-    final name =
+  Future<bool> _saveProfile() async {
+    final String name =
     _nameController.text.trim();
 
-    final city =
+    final String city =
     _cityController.text.trim();
 
     if (name.isEmpty) {
       _showMessage(
         'Please enter your name.',
       );
-      return;
+      return false;
     }
 
     if (city.isEmpty) {
       _showMessage(
         'Please enter your city.',
       );
-      return;
+      return false;
     }
 
-    if (_isSaving) return;
+    if (_isSaving) {
+      return false;
+    }
 
-    setState(() {
-      _isSaving = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isSaving = true;
+      });
+    }
 
     try {
       await _authService.updateProfile(
@@ -213,11 +203,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         city: city,
       );
 
-      final updatedUser =
-      await _authService
-          .getCurrentUserProfile();
+      final UserModel? updatedUser =
+      await _authService.getCurrentUserProfile();
 
-      if (!mounted) return;
+      if (!mounted) return false;
 
       if (updatedUser != null) {
         setState(() {
@@ -229,18 +218,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isSaving = false;
       });
 
-      Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Profile updated successfully.',
-          ),
-        ),
-      );
+      return true;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return false;
 
       setState(() {
         _isSaving = false;
@@ -249,6 +229,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _showMessage(
         _cleanError(e),
       );
+
+      return false;
     }
   }
 
@@ -257,7 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ============================================================
 
   Future<void> _logout() async {
-    final confirmed =
+    final bool? confirmed =
     await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -271,9 +253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(false);
+                Navigator.of(dialogContext).pop(false);
               },
               child: const Text(
                 'Cancel',
@@ -281,9 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             FilledButton(
               onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop(true);
+                Navigator.of(dialogContext).pop(true);
               },
               child: const Text(
                 'Logout',
@@ -299,9 +277,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
       await _authService.logout();
+
+      if (!mounted) return;
+
+      // Clear complete navigation stack.
+      // User cannot go back to Student Dashboard/Profile.
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.login,
+            (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
 
       _showMessage(
         _cleanError(e),
@@ -314,45 +311,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ============================================================
 
   void _openEditProfile() {
-    if (_user == null) return;
+    final UserModel? user = _user;
 
-    _nameController.text = _user!.name;
-    _cityController.text = _user!.city;
+    if (user == null) {
+      return;
+    }
 
-    showModalBottomSheet(
+    _nameController.text = user.name;
+    _cityController.text = user.city;
+
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-        BorderRadius.vertical(
+        borderRadius: BorderRadius.vertical(
           top: Radius.circular(24),
         ),
       ),
       builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (
-              context,
-              setSheetState,
-              ) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom:
-                MediaQuery.of(
-                  context,
-                ).viewInsets.bottom +
-                    20,
-              ),
-              child: SingleChildScrollView(
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom:
+            MediaQuery.of(sheetContext).viewInsets.bottom +
+                20,
+          ),
+          child: StatefulBuilder(
+            builder: (
+                context,
+                setSheetState,
+                ) {
+              return SingleChildScrollView(
                 child: Column(
-                  mainAxisSize:
-                  MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment:
                   CrossAxisAlignment.start,
                   children: [
+                    // ------------------------------------------------
+                    // SHEET HEADER
+                    // ------------------------------------------------
+
                     Row(
                       children: [
                         const Expanded(
@@ -360,13 +361,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             'Edit Profile',
                             style: TextStyle(
                               fontSize: 21,
-                              fontWeight:
-                              FontWeight.w700,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                         IconButton(
-                          onPressed: () {
+                          onPressed: _isSaving
+                              ? null
+                              : () {
                             Navigator.of(
                               sheetContext,
                             ).pop();
@@ -380,17 +382,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 20),
 
+                    // ------------------------------------------------
+                    // NAME
+                    // ------------------------------------------------
+
                     TextField(
-                      controller:
-                      _nameController,
+                      controller: _nameController,
+                      enabled: !_isSaving,
                       textCapitalization:
                       TextCapitalization.words,
                       decoration:
                       const InputDecoration(
-                        labelText:
-                        'Full Name',
-                        prefixIcon:
-                        Icon(
+                        labelText: 'Full Name',
+                        prefixIcon: Icon(
                           Icons.person_outline,
                         ),
                       ),
@@ -398,22 +402,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 14),
 
+                    // ------------------------------------------------
+                    // CITY
+                    // ------------------------------------------------
+
                     TextField(
-                      controller:
-                      _cityController,
+                      controller: _cityController,
+                      enabled: !_isSaving,
                       textCapitalization:
                       TextCapitalization.words,
                       decoration:
                       const InputDecoration(
                         labelText: 'City',
-                        prefixIcon:
-                        Icon(
+                        prefixIcon: Icon(
                           Icons.location_city_outlined,
                         ),
                       ),
                     ),
 
                     const SizedBox(height: 20),
+
+                    // ------------------------------------------------
+                    // SAVE BUTTON
+                    // ------------------------------------------------
 
                     SizedBox(
                       width: double.infinity,
@@ -422,11 +433,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: _isSaving
                             ? null
                             : () async {
-                          setSheetState(
-                                () {},
-                          );
-
+                          final bool saved =
                           await _saveProfile();
+
+                          if (!mounted) return;
+
+                          if (saved) {
+                            Navigator.of(
+                              sheetContext,
+                            ).pop();
+
+                            _showMessage(
+                              'Profile updated successfully.',
+                            );
+                          }
+
+                          // Rebuild sheet button state.
+                          setSheetState(() {});
                         },
                         child: _isSaving
                             ? const SizedBox(
@@ -435,8 +458,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child:
                           CircularProgressIndicator(
                             strokeWidth: 2,
-                            color:
-                            Colors.white,
+                            color: Colors.white,
                           ),
                         )
                             : const Text(
@@ -444,11 +466,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 5),
                   ],
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
@@ -464,14 +488,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context)
-        .showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+        ),
+      );
   }
 
-  String _cleanError(Object error) {
+  // ============================================================
+  // CLEAN FIREBASE ERROR
+  // ============================================================
+
+  String _cleanError(
+      Object error,
+      ) {
     return error
         .toString()
         .replaceFirst(
@@ -489,6 +520,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _cityController.dispose();
+
     super.dispose();
   }
 
@@ -497,20 +529,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ============================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     return Scaffold(
-      backgroundColor:
-      AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           'My Profile',
         ),
         actions: [
-          if (!_isLoading &&
-              _user != null)
+          if (!_isLoading && _user != null)
             IconButton(
-              onPressed:
-              _openEditProfile,
+              onPressed: _openEditProfile,
               icon: const Icon(
                 Icons.edit_outlined,
               ),
@@ -536,8 +567,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_error != null) {
       return Center(
         child: Padding(
-          padding:
-          const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment:
             MainAxisAlignment.center,
@@ -545,23 +575,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Icon(
                 Icons.person_off_outlined,
                 size: 52,
-                color:
-                AppColors.textSecondary,
+                color: AppColors.textSecondary,
               ),
 
               const SizedBox(height: 15),
 
               Text(
                 _error!,
-                textAlign:
-                TextAlign.center,
+                textAlign: TextAlign.center,
               ),
 
               const SizedBox(height: 15),
 
               ElevatedButton(
-                onPressed:
-                _loadProfile,
+                onPressed: _loadProfile,
                 child: const Text(
                   'Retry',
                 ),
@@ -572,7 +599,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final user = _user;
+    final UserModel? user = _user;
 
     if (user == null) {
       return const Center(
@@ -587,34 +614,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: ListView(
         physics:
         const AlwaysScrollableScrollPhysics(),
-        padding:
-        const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         children: [
           FadeSlideAnimation(
-            child:
-            _buildProfileHeader(
-              user,
-            ),
+            child: _buildProfileHeader(user),
           ),
 
           const SizedBox(height: 22),
 
           FadeSlideAnimation(
-            delay:
-            const Duration(
+            delay: const Duration(
               milliseconds: 80,
             ),
-            child:
-            _buildInformationCard(
-              user,
-            ),
+            child: _buildInformationCard(user),
           ),
 
           const SizedBox(height: 18),
 
           FadeSlideAnimation(
-            delay:
-            const Duration(
+            delay: const Duration(
               milliseconds: 140,
             ),
             child: _buildActions(),
@@ -633,36 +651,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileHeader(
       UserModel user,
       ) {
-    final hasPhoto =
+    final bool hasPhoto =
         user.photoUrl != null &&
             user.photoUrl!.trim().isNotEmpty;
 
     return Container(
-      padding:
-      const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient:
-        const LinearGradient(
+        gradient: const LinearGradient(
           colors: [
             AppColors.primary,
             AppColors.primaryLight,
           ],
         ),
-        borderRadius:
-        BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         children: [
           Stack(
-            alignment:
-            Alignment.bottomRight,
+            alignment: Alignment.bottomRight,
             children: [
               CircleAvatar(
                 radius: 48,
-                backgroundColor:
-                Colors.white,
-                backgroundImage:
-                hasPhoto
+                backgroundColor: Colors.white,
+                backgroundImage: hasPhoto
                     ? NetworkImage(
                   user.photoUrl!,
                 )
@@ -671,15 +683,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? const Icon(
                   Icons.person_rounded,
                   size: 48,
-                  color:
-                  AppColors.primary,
+                  color: AppColors.primary,
                 )
                     : null,
               ),
 
+              // ----------------------------------------------------
+              // CAMERA BUTTON
+              // ----------------------------------------------------
+
               GestureDetector(
-                onTap:
-                _isUploadingPhoto
+                onTap: _isUploadingPhoto
                     ? null
                     : _pickAndUploadPhoto,
                 child: Container(
@@ -688,27 +702,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration:
                   const BoxDecoration(
                     color: Colors.white,
-                    shape:
-                    BoxShape.circle,
+                    shape: BoxShape.circle,
                   ),
-                  child:
-                  _isUploadingPhoto
+                  child: _isUploadingPhoto
                       ? const Padding(
                     padding:
-                    EdgeInsets.all(
-                      8,
-                    ),
+                    EdgeInsets.all(8),
                     child:
                     CircularProgressIndicator(
                       strokeWidth: 2,
                     ),
                   )
                       : const Icon(
-                    Icons
-                        .camera_alt_outlined,
+                    Icons.camera_alt_outlined,
                     size: 18,
-                    color:
-                    AppColors.primary,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -721,13 +729,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             user.name.isEmpty
                 ? 'Student'
                 : user.name,
-            textAlign:
-            TextAlign.center,
-            style:
-            const TextStyle(
+            textAlign: TextAlign.center,
+            style: const TextStyle(
               fontSize: 21,
-              fontWeight:
-              FontWeight.w700,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
           ),
@@ -736,13 +741,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           Text(
             user.email,
-            textAlign:
-            TextAlign.center,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color:
-              Colors.white
-                  .withValues(
+              color: Colors.white.withValues(
                 alpha: 0.85,
               ),
             ),
@@ -756,23 +758,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               horizontal: 12,
               vertical: 6,
             ),
-            decoration:
-            BoxDecoration(
-              color: Colors.white
-                  .withValues(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(
                 alpha: 0.15,
               ),
               borderRadius:
-              BorderRadius.circular(
-                20,
-              ),
+              BorderRadius.circular(20),
             ),
             child: const Text(
               'Student',
               style: TextStyle(
                 fontSize: 11,
-                fontWeight:
-                FontWeight.w600,
+                fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
             ),
@@ -789,21 +786,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildInformationCard(
       UserModel user,
       ) {
-    final courseValue =
-    user.courseId?.trim().isNotEmpty ==
-        true
+    final String courseValue =
+    user.courseId?.trim().isNotEmpty == true
         ? user.courseId!
         : 'Not assigned';
 
-    final batchValue =
-    user.batchId?.trim().isNotEmpty ==
-        true
+    final String batchValue =
+    user.batchId?.trim().isNotEmpty == true
         ? user.batchId!
         : 'Not assigned';
 
     return Container(
-      padding:
-      const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius:
@@ -815,8 +809,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         children: [
           _InfoTile(
-            icon:
-            Icons.person_outline,
+            icon: Icons.person_outline,
             title: 'Full Name',
             value: user.name.isEmpty
                 ? 'Not added'
@@ -826,8 +819,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 24),
 
           _InfoTile(
-            icon:
-            Icons.email_outlined,
+            icon: Icons.email_outlined,
             title: 'Email',
             value: user.email.isEmpty
                 ? 'Not available'
@@ -837,8 +829,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 24),
 
           _InfoTile(
-            icon:
-            Icons.phone_outlined,
+            icon: Icons.phone_outlined,
             title: 'Phone',
             value: user.phone.isEmpty
                 ? 'Not added'
@@ -859,11 +850,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 24),
 
           _InfoTile(
-            icon:
-            Icons.school_outlined,
+            icon: Icons.school_outlined,
             title: 'Campus',
-            value:
-            user.campus.isEmpty
+            value: user.campus.isEmpty
                 ? 'Not assigned'
                 : user.campus,
           ),
@@ -871,8 +860,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 24),
 
           _InfoTile(
-            icon:
-            Icons.menu_book_outlined,
+            icon: Icons.menu_book_outlined,
             title: 'Course',
             value: courseValue,
           ),
@@ -880,8 +868,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 24),
 
           _InfoTile(
-            icon:
-            Icons.groups_outlined,
+            icon: Icons.groups_outlined,
             title: 'Batch',
             value: batchValue,
           ),
@@ -898,25 +885,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         _ActionTile(
-          icon:
-          Icons.edit_outlined,
+          icon: Icons.edit_outlined,
           title: 'Edit Profile',
           subtitle:
           'Update your name and city',
-          onTap:
-          _openEditProfile,
+          onTap: _openEditProfile,
         ),
 
         const SizedBox(height: 10),
 
         _ActionTile(
-          icon:
-          Icons.logout_rounded,
+          icon: Icons.logout_rounded,
           title: 'Logout',
           subtitle:
           'Sign out from your account',
-          iconColor:
-          AppColors.error,
+          iconColor: AppColors.error,
           onTap: _logout,
         ),
       ],
@@ -940,26 +923,23 @@ class _InfoTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     return Row(
       children: [
         Container(
           width: 40,
           height: 40,
-          decoration:
-          BoxDecoration(
-            color:
-            AppColors.accentLight,
+          decoration: BoxDecoration(
+            color: AppColors.accentLight,
             borderRadius:
-            BorderRadius.circular(
-              11,
-            ),
+            BorderRadius.circular(11),
           ),
           child: Icon(
             icon,
             size: 20,
-            color:
-            AppColors.primary,
+            color: AppColors.primary,
           ),
         ),
 
@@ -972,12 +952,10 @@ class _InfoTile extends StatelessWidget {
             children: [
               Text(
                 title,
-                style:
-                const TextStyle(
+                style: const TextStyle(
                   fontSize: 11,
                   color:
-                  AppColors
-                      .textSecondary,
+                  AppColors.textSecondary,
                 ),
               ),
 
@@ -987,14 +965,11 @@ class _InfoTile extends StatelessWidget {
                 value.isEmpty
                     ? 'Not available'
                     : value,
-                style:
-                const TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight:
                   FontWeight.w600,
-                  color:
-                  AppColors
-                      .textPrimary,
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -1025,8 +1000,10 @@ class _ActionTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final color =
+  Widget build(
+      BuildContext context,
+      ) {
+    final Color color =
         iconColor ?? AppColors.primary;
 
     return Material(
@@ -1038,10 +1015,8 @@ class _ActionTile extends StatelessWidget {
         borderRadius:
         BorderRadius.circular(17),
         child: Container(
-          padding:
-          const EdgeInsets.all(15),
-          decoration:
-          BoxDecoration(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
             borderRadius:
             BorderRadius.circular(17),
             border: Border.all(
@@ -1053,16 +1028,12 @@ class _ActionTile extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
-                decoration:
-                BoxDecoration(
-                  color: color
-                      .withValues(
+                decoration: BoxDecoration(
+                  color: color.withValues(
                     alpha: 0.10,
                   ),
                   borderRadius:
-                  BorderRadius.circular(
-                    12,
-                  ),
+                  BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
@@ -1075,13 +1046,11 @@ class _ActionTile extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+                  CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style:
-                      const TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight:
                         FontWeight.w600,
@@ -1092,8 +1061,7 @@ class _ActionTile extends StatelessWidget {
 
                     Text(
                       subtitle,
-                      style:
-                      const TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         color:
                         AppColors
@@ -1105,12 +1073,10 @@ class _ActionTile extends StatelessWidget {
               ),
 
               const Icon(
-                Icons
-                    .arrow_forward_ios_rounded,
+                Icons.arrow_forward_ios_rounded,
                 size: 14,
                 color:
-                AppColors
-                    .textSecondary,
+                AppColors.textSecondary,
               ),
             ],
           ),

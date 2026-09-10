@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../features/instructor/screens/instructor_home_screen.dart';
-
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
 
-import '../../features/student/class/screen/my_classes_screen.dart';
+// Student
 import '../../features/student/student_shell.dart';
+import '../../features/student/class/screen/my_classes_screen.dart';
+
+// Instructor
+import '../../features/instructor/screens/instructor_home_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -24,8 +26,10 @@ class AppRoutes {
   static const String studentHome = '/student-home';
   static const String myClasses = '/my-classes';
 
-  // Future roles
+  // Instructor
   static const String instructorHome = '/instructor-home';
+
+  // Coordinator
   static const String coordinatorDashboard =
       '/coordinator-dashboard';
 
@@ -35,41 +39,37 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> get routes {
     return {
-      // --------------------------------------------------------
-      // Splash
-      // --------------------------------------------------------
+      // ----------------------------------------------------------
+      // AUTH
+      // ----------------------------------------------------------
+
       splash: (context) => const SplashScreen(),
 
-      // --------------------------------------------------------
-      // Authentication
-      // --------------------------------------------------------
       login: (context) => const LoginScreen(),
+
       register: (context) => const RegisterScreen(),
 
-      // --------------------------------------------------------
-      // STUDENT SHELL
-      // --------------------------------------------------------
-      //
-      // Login ke baad student ko complete shell milega:
-      //
-      // Home
-      // Courses
-      // Classes
-      // Assignments
-      // Progress
-      // Profile
-      //
+      // ----------------------------------------------------------
+      // STUDENT
+      // ----------------------------------------------------------
+
       studentHome: (context) => const StudentShell(),
 
-      // --------------------------------------------------------
-      // Student My Classes
-      // --------------------------------------------------------
       myClasses: (context) => const MyClassesScreen(),
 
-      // --------------------------------------------------------
-      // Instructor Dashboard
-      // --------------------------------------------------------
-      instructorHome: (context) => const InstructorHomeScreen(),
+      // ----------------------------------------------------------
+      // INSTRUCTOR
+      // ----------------------------------------------------------
+
+      instructorHome: (context) =>
+          const InstructorHomeScreen(),
+
+      // ----------------------------------------------------------
+      // COORDINATOR
+      // ----------------------------------------------------------
+
+      // coordinatorDashboard: (context) =>
+      //     const CoordinatorDashboardScreen(),
     };
   }
 }

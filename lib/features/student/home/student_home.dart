@@ -7,14 +7,15 @@ import '../../../core/widgets/quick_action_card.dart';
 import '../../../core/widgets/welcome_header.dart';
 import '../../../models/student_dashboard_model.dart';
 import '../../../services/student_service.dart';
+
 import '../../auth/screens/attendance/screens/attendance_screen.dart';
 import '../../shared/notifications/screen/notifications_screen.dart';
+
 import '../assignments/widgets/assignment_summary_card.dart';
 import '../attendence/widget/attendance_summary_card.dart';
 import '../career/screen/career_readiness_screen.dart';
 import '../class/widget/upcoming_class_card.dart';
 import '../courses/widgets/current_course_card.dart';
-
 
 class StudentHomeScreen extends StatefulWidget {
 const StudentHomeScreen({
@@ -26,34 +27,46 @@ State<StudentHomeScreen> createState() =>
 _StudentHomeScreenState();
 }
 
-class _StudentHomeScreenState
-extends State<StudentHomeScreen> {
-late Future<StudentDashboardModel>
-_dashboardFuture;
+class _StudentHomeScreenState extends State<StudentHomeScreen> {
+late Future<StudentDashboardModel> _dashboardFuture;
 
 @override
 void initState() {
 super.initState();
 
+_loadDashboard();
+}
+
+// ============================================================
+// LOAD DASHBOARD
+// ============================================================
+
+void _loadDashboard() {
 _dashboardFuture =
 StudentHomeService.instance.getDashboard();
 }
 
+// ============================================================
+// REFRESH
+// ============================================================
+
 Future<void> _refresh() async {
 setState(() {
-_dashboardFuture =
-StudentHomeService.instance.getDashboard();
+_loadDashboard();
 });
 
 await _dashboardFuture;
 }
 
+// ============================================================
+// NAVIGATION
+// ============================================================
+
 void _openNotifications() {
 Navigator.push(
 context,
 MaterialPageRoute(
-builder: (_) =>
-const NotificationsScreen(),
+builder: (_) => const NotificationsScreen(),
 ),
 );
 }
@@ -62,8 +75,7 @@ void _openAttendance() {
 Navigator.push(
 context,
 MaterialPageRoute(
-builder: (_) =>
-const AttendanceScreen(),
+builder: (_) => const AttendanceScreen(),
 ),
 );
 }
@@ -72,28 +84,29 @@ void _openCareer() {
 Navigator.push(
 context,
 MaterialPageRoute(
-builder: (_) =>
-const CareerReadinessScreen(),
+builder: (_) => const CareerReadinessScreen(),
 ),
 );
 }
 
+// ============================================================
+// BUILD
+// ============================================================
+
 @override
 Widget build(BuildContext context) {
 return Scaffold(
-backgroundColor:
-AppColors.background,
+backgroundColor: AppColors.background,
 body: SafeArea(
-child:
-FutureBuilder<StudentDashboardModel>(
+child: FutureBuilder<StudentDashboardModel>(
 future: _dashboardFuture,
 builder: (
 context,
 snapshot,
 ) {
-// ==========================================
+// ==================================================
 // LOADING
-// ==========================================
+// ==================================================
 
 if (snapshot.connectionState ==
 ConnectionState.waiting) {
@@ -102,9 +115,9 @@ child: LoadingWidget(),
 );
 }
 
-// ==========================================
+// ==================================================
 // ERROR
-// ==========================================
+// ==================================================
 
 if (snapshot.hasError) {
 return _ErrorView(
@@ -112,9 +125,9 @@ onRetry: _refresh,
 );
 }
 
-// ==========================================
-// DATA
-// ==========================================
+// ==================================================
+// EMPTY DATA
+// ==================================================
 
 final data = snapshot.data;
 
@@ -124,17 +137,16 @@ onRetry: _refresh,
 );
 }
 
-// ==========================================
+// ==================================================
 // DASHBOARD
-// ==========================================
+// ==================================================
 
 return RefreshIndicator(
 onRefresh: _refresh,
 child: SingleChildScrollView(
 physics:
 const AlwaysScrollableScrollPhysics(),
-padding:
-const EdgeInsets.fromLTRB(
+padding: const EdgeInsets.fromLTRB(
 20,
 18,
 20,
@@ -144,9 +156,9 @@ child: Column(
 crossAxisAlignment:
 CrossAxisAlignment.start,
 children: [
-// ==================================
-// HEADER
-// ==================================
+// ==========================================
+// WELCOME HEADER
+// ==========================================
 
 FadeSlideAnimation(
 child: WelcomeHeader(
@@ -158,9 +170,9 @@ _openNotifications,
 
 const SizedBox(height: 24),
 
-// ==================================
+// ==========================================
 // CURRENT COURSE
-// ==================================
+// ==========================================
 
 FadeSlideAnimation(
 delay: const Duration(
@@ -180,9 +192,9 @@ onTap: () {},
 
 const SizedBox(height: 16),
 
-// ==================================
+// ==========================================
 // ATTENDANCE
-// ==================================
+// ==========================================
 
 FadeSlideAnimation(
 delay: const Duration(
@@ -199,9 +211,9 @@ _openAttendance,
 
 const SizedBox(height: 12),
 
-// ==================================
+// ==========================================
 // ASSIGNMENTS
-// ==================================
+// ==========================================
 
 FadeSlideAnimation(
 delay: const Duration(
@@ -219,9 +231,9 @@ onTap: () {},
 
 const SizedBox(height: 26),
 
-// ==================================
+// ==========================================
 // UPCOMING CLASS TITLE
-// ==================================
+// ==========================================
 
 const FadeSlideAnimation(
 delay: Duration(
@@ -241,9 +253,9 @@ AppColors.textPrimary,
 
 const SizedBox(height: 12),
 
-// ==================================
+// ==========================================
 // UPCOMING CLASS
-// ==================================
+// ==========================================
 
 FadeSlideAnimation(
 delay: const Duration(
@@ -269,9 +281,9 @@ data.instructorId
 
 const SizedBox(height: 26),
 
-// ==================================
+// ==========================================
 // QUICK ACTIONS TITLE
-// ==================================
+// ==========================================
 
 const FadeSlideAnimation(
 delay: Duration(
@@ -291,9 +303,9 @@ AppColors.textPrimary,
 
 const SizedBox(height: 12),
 
-// ==================================
+// ==========================================
 // QUICK ACTIONS
-// ==================================
+// ==========================================
 
 GridView.count(
 crossAxisCount: 2,
@@ -339,9 +351,9 @@ onTap: _openCareer,
 
 const SizedBox(height: 20),
 
-// ==================================
-// TIP
-// ==================================
+// ==========================================
+// JOB-READY TIP
+// ==========================================
 
 FadeSlideAnimation(
 delay: const Duration(
@@ -356,11 +368,11 @@ BoxDecoration(
 color:
 AppColors.accentLight,
 borderRadius:
-BorderRadius.circular(
-16,
-),
+BorderRadius.circular(16),
 ),
 child: const Row(
+crossAxisAlignment:
+CrossAxisAlignment.start,
 children: [
 Icon(
 Icons
@@ -374,8 +386,9 @@ child: Text(
 'Stay consistent with your classes and assignments to become job-ready.',
 style: TextStyle(
 fontSize: 12,
-color: AppColors
-    .textPrimary,
+height: 1.4,
+color:
+AppColors.textPrimary,
 ),
 ),
 ),
@@ -394,12 +407,11 @@ color: AppColors
 }
 }
 
-// =====================================================
+// ============================================================
 // ANIMATED QUICK ACTION
-// =====================================================
+// ============================================================
 
-class _AnimatedAction
-extends StatelessWidget {
+class _AnimatedAction extends StatelessWidget {
 final int delay;
 final IconData icon;
 final String title;
@@ -427,12 +439,11 @@ onTap: onTap,
 }
 }
 
-// =====================================================
+// ============================================================
 // ERROR VIEW
-// =====================================================
+// ============================================================
 
-class _ErrorView
-extends StatelessWidget {
+class _ErrorView extends StatelessWidget {
 final VoidCallback onRetry;
 
 const _ErrorView({
@@ -443,8 +454,7 @@ required this.onRetry,
 Widget build(BuildContext context) {
 return Center(
 child: Padding(
-padding:
-const EdgeInsets.all(24),
+padding: const EdgeInsets.all(24),
 child: Column(
 mainAxisAlignment:
 MainAxisAlignment.center,
@@ -454,7 +464,9 @@ Icons.cloud_off_rounded,
 size: 56,
 color: AppColors.textLight,
 ),
+
 const SizedBox(height: 16),
+
 const Text(
 'Unable to load dashboard',
 style: TextStyle(
@@ -466,7 +478,9 @@ AppColors.textPrimary,
 ),
 textAlign: TextAlign.center,
 ),
+
 const SizedBox(height: 8),
+
 const Text(
 'Please check your internet connection and try again.',
 textAlign: TextAlign.center,
@@ -475,10 +489,15 @@ color:
 AppColors.textSecondary,
 ),
 ),
+
 const SizedBox(height: 20),
-ElevatedButton(
+
+ElevatedButton.icon(
 onPressed: onRetry,
-child: const Text(
+icon: const Icon(
+Icons.refresh_rounded,
+),
+label: const Text(
 'Retry',
 ),
 ),

@@ -23,8 +23,13 @@ class SubmissionService {
   final FirebaseStorage _storage =
       FirebaseStorage.instance;
 
+  // ============================================================
+  // CURRENT USER UID
+  // ============================================================
+
   String get _uid {
-    final user = _auth.currentUser;
+    final User? user =
+        _auth.currentUser;
 
     if (user == null) {
       throw Exception(
@@ -35,6 +40,10 @@ class SubmissionService {
     return user.uid;
   }
 
+  // ============================================================
+  // SUBMISSIONS COLLECTION
+  // ============================================================
+
   CollectionReference<Map<String, dynamic>>
   get _submissions {
     return _firestore.collection(
@@ -42,14 +51,26 @@ class SubmissionService {
     );
   }
 
+  // ============================================================
+  // GET MY SUBMISSION FOR ONE ASSIGNMENT
+  // ============================================================
+
   Future<SubmissionModel?> getMySubmission(
       String assignmentId,
       ) async {
-    final snapshot =
+    final String trimmedId =
+    assignmentId.trim();
+
+    if (trimmedId.isEmpty) {
+      return null;
+    }
+
+    final QuerySnapshot<
+        Map<String, dynamic>> snapshot =
     await _submissions
         .where(
       'assignmentId',
-      isEqualTo: assignmentId,
+      isEqualTo: trimmedId,
     )
         .where(
       'studentId',
@@ -67,9 +88,14 @@ class SubmissionService {
     );
   }
 
+  // ============================================================
+  // GET ALL MY SUBMISSIONS
+  // ============================================================
+
   Future<List<SubmissionModel>>
   getMySubmissions() async {
-    final snapshot =
+    final QuerySnapshot<
+        Map<String, dynamic>> snapshot =
     await _submissions
         .where(
       'studentId',
@@ -77,55 +103,64 @@ class SubmissionService {
     )
         .get();
 
-    final submissions =
+    final List<SubmissionModel>
+    submissions =
     snapshot.docs
         .map(
           (doc) =>
-          SubmissionModel
-              .fromFirestore(
+          SubmissionModel.fromFirestore(
             doc,
           ),
     )
         .toList();
 
-    submissions.sort((a, b) {
-      final aDate = a.submittedAt;
-      final bDate = b.submittedAt;
+    submissions.sort(
+          (a, b) {
+        final DateTime? aDate =
+            a.submittedAt;
 
-      if (aDate == null &&
-          bDate == null) {
-        return 0;
-      }
+        final DateTime? bDate =
+            b.submittedAt;
 
-      if (aDate == null) {
-        return 1;
-      }
+        if (aDate == null &&
+            bDate == null) {
+          return 0;
+        }
 
-      if (bDate == null) {
-        return -1;
-      }
+        if (aDate == null) {
+          return 1;
+        }
 
-      return bDate.compareTo(aDate);
-    });
+        if (bDate == null) {
+          return -1;
+        }
+
+        return bDate.compareTo(aDate);
+      },
+    );
 
     return submissions;
   }
+
+  // ============================================================
+  // UPLOAD SUBMISSION FILE
+  // ============================================================
 
   Future<String> uploadSubmissionFile({
     required String assignmentId,
     required Uint8List fileBytes,
     required String fileName,
   }) async {
-    final safeFileName =
+    final String safeFileName =
     _sanitizeFileName(fileName);
 
-    final storagePath =
+    final String storagePath =
         'submissions/'
         '$assignmentId/'
         '$_uid/'
         '$safeFileName';
 
-    final reference =
+    final Reference reference =
     _storage.ref().child(
       storagePath,
     );
@@ -143,6 +178,10 @@ class SubmissionService {
     return reference.getDownloadURL();
   }
 
+  // ============================================================
+  // SUBMIT ASSIGNMENT
+  // ============================================================
+
   Future<String> submitAssignment({
     required AssignmentModel assignment,
     required String batchId,
@@ -150,7 +189,28 @@ class SubmissionService {
     Uint8List? fileBytes,
     String? fileName,
   }) async {
-    final existingSubmission =
+    // ----------------------------------------------------------
+    // CHECK LOGIN
+    // ----------------------------------------------------------
+
+    final String studentId = _uid;
+
+    // ----------------------------------------------------------
+    // CHECK BATCH
+    // ----------------------------------------------------------
+
+    if (batchId.trim().isEmpty) {
+      throw Exception(
+        'Student batch is not assigned.',
+      );
+    }
+
+    // ----------------------------------------------------------
+    // CHECK DUPLICATE SUBMISSION
+    // ----------------------------------------------------------
+
+    final SubmissionModel?
+    existingSubmission =
     await getMySubmission(
       assignment.id,
     );
@@ -161,12 +221,23 @@ class SubmissionService {
       );
     }
 
-    if (answerText.trim().isEmpty &&
+    // ----------------------------------------------------------
+    // CHECK ANSWER / FILE
+    // ----------------------------------------------------------
+
+    final String trimmedAnswer =
+    answerText.trim();
+
+    if (trimmedAnswer.isEmpty &&
         fileBytes == null) {
       throw Exception(
         'Please provide an answer or upload a file.',
       );
     }
+
+    // ----------------------------------------------------------
+    // UPLOAD FILE
+    // ----------------------------------------------------------
 
     String? fileUrl;
 
@@ -180,15 +251,21 @@ class SubmissionService {
 
       fileUrl =
       await uploadSubmissionFile(
-        assignmentId: assignment.id,
+        assignmentId:
+        assignment.id,
         fileBytes: fileBytes,
         fileName: fileName,
       );
     }
 
-    final now = DateTime.now();
+    // ----------------------------------------------------------
+    // STATUS
+    // ----------------------------------------------------------
 
-    final status =
+    final DateTime now =
+    DateTime.now();
+
+    final String status =
     assignment.dueDate != null &&
         now.isAfter(
           assignment.dueDate!,
@@ -196,16 +273,21 @@ class SubmissionService {
         ? 'late'
         : 'submitted';
 
-    final docRef =
+    // ----------------------------------------------------------
+    // CREATE FIRESTORE DOCUMENT
+    // ----------------------------------------------------------
+
+    final DocumentReference<
+        Map<String, dynamic>> docRef =
     _submissions.doc();
 
-    final submission =
+    final SubmissionModel submission =
     SubmissionModel(
       id: docRef.id,
       assignmentId: assignment.id,
-      studentId: _uid,
-      batchId: batchId,
-      answerText: answerText.trim(),
+      studentId: studentId,
+      batchId: batchId.trim(),
+      answerText: trimmedAnswer,
       fileUrl: fileUrl,
       fileName: fileName,
       status: status,
@@ -223,6 +305,10 @@ class SubmissionService {
     return docRef.id;
   }
 
+  // ============================================================
+  // FILE NAME
+  // ============================================================
+
   String _sanitizeFileName(
       String fileName,
       ) {
@@ -236,10 +322,14 @@ class SubmissionService {
     );
   }
 
+  // ============================================================
+  // CONTENT TYPE
+  // ============================================================
+
   String _getContentType(
       String fileName,
       ) {
-    final extension =
+    final String extension =
         fileName
             .toLowerCase()
             .split('.')

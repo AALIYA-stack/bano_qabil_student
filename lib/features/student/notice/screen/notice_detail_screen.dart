@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
 import '../../../../core/widgets/loading_widget.dart';

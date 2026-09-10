@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'animation_constants.dart';
 import 'fade_slide_animation.dart';
 
