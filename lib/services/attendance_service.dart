@@ -32,23 +32,121 @@ class AttendanceService {
   }
 
   // ============================================================
-  // GET MY ATTENDANCE
+  // GET CURRENT STUDENT BATCH ID
   // ============================================================
 
-  Future<List<AttendanceModel>> getMyAttendance({
-    required String batchId,
-  }) async {
-    final QuerySnapshot<
-        Map<String, dynamic>> snapshot =
+  Future<String?> getCurrentBatchId() async {
+    final DocumentSnapshot<Map<String, dynamic>>
+    userDoc =
     await _firestore
+        .collection('users')
+        .doc(_uid)
+        .get();
+
+    if (!userDoc.exists) {
+      return null;
+    }
+
+    final Map<String, dynamic>? data =
+    userDoc.data();
+
+    if (data == null) {
+      return null;
+    }
+
+    // First try correct field.
+    String batchId =
+        data['batchId']?.toString().trim() ?? '';
+
+    // Support old Firestore field too.
+    if (batchId.isEmpty) {
+      batchId =
+          data['batchid']?.toString().trim() ?? '';
+    }
+
+    if (batchId.isEmpty) {
+      return null;
+    }
+
+    return batchId;
+  }
+
+  // ============================================================
+  // REAL-TIME MY ATTENDANCE
+  // ============================================================
+
+  Stream<List<AttendanceModel>>
+  getMyAttendanceStream({
+    required String batchId,
+  }) {
+    final String requiredBatchId =
+    batchId.trim();
+
+    if (requiredBatchId.isEmpty) {
+      return Stream.value(
+        const <AttendanceModel>[],
+      );
+    }
+
+    return _firestore
         .collection('attendance')
         .where(
       'studentId',
       isEqualTo: _uid,
     )
+        .snapshots()
+        .map(
+          (
+          QuerySnapshot<Map<String, dynamic>>
+          snapshot,
+          ) {
+        final List<AttendanceModel> records =
+        snapshot.docs
+            .map(
+              (doc) =>
+              AttendanceModel
+                  .fromFirestore(doc),
+        )
+            .where(
+              (record) =>
+          record.studentId == _uid &&
+              record.batchId ==
+                  requiredBatchId,
+        )
+            .toList();
+
+        records.sort(
+              (a, b) =>
+              b.date.compareTo(a.date),
+        );
+
+        return records;
+      },
+    );
+  }
+
+  // ============================================================
+  // GET MY ATTENDANCE
+  // ============================================================
+
+  Future<List<AttendanceModel>>
+  getMyAttendance({
+    required String batchId,
+  }) async {
+    final String requiredBatchId =
+    batchId.trim();
+
+    if (requiredBatchId.isEmpty) {
+      return const <AttendanceModel>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>>
+    snapshot =
+    await _firestore
+        .collection('attendance')
         .where(
-      'batchId',
-      isEqualTo: batchId,
+      'studentId',
+      isEqualTo: _uid,
     )
         .get();
 
@@ -60,10 +158,17 @@ class AttendanceService {
             doc,
           ),
     )
+        .where(
+          (record) =>
+      record.studentId == _uid &&
+          record.batchId ==
+              requiredBatchId,
+    )
         .toList();
 
     records.sort(
-          (a, b) => b.date.compareTo(a.date),
+          (a, b) =>
+          b.date.compareTo(a.date),
     );
 
     return records;
@@ -75,8 +180,8 @@ class AttendanceService {
 
   Future<List<AttendanceModel>>
   getAllMyAttendance() async {
-    final QuerySnapshot<
-        Map<String, dynamic>> snapshot =
+    final QuerySnapshot<Map<String, dynamic>>
+    snapshot =
     await _firestore
         .collection('attendance')
         .where(
@@ -96,14 +201,15 @@ class AttendanceService {
         .toList();
 
     records.sort(
-          (a, b) => b.date.compareTo(a.date),
+          (a, b) =>
+          b.date.compareTo(a.date),
     );
 
     return records;
   }
 
   // ============================================================
-  // GET MONTHLY ATTENDANCE
+  // MONTHLY ATTENDANCE
   // ============================================================
 
   Future<List<AttendanceModel>>
@@ -126,14 +232,14 @@ class AttendanceService {
   }
 
   // ============================================================
-  // CALCULATE PERCENTAGE
+  // CALCULATE ATTENDANCE PERCENTAGE
   // ============================================================
 
   double calculatePercentage(
       List<AttendanceModel> records,
       ) {
     if (records.isEmpty) {
-      return 0;
+      return 0.0;
     }
 
     final int attended =
@@ -141,7 +247,12 @@ class AttendanceService {
               (record) => record.isAttended,
         ).length;
 
-    return (attended / records.length) * 100;
+    final double percentage =
+        (attended / records.length) * 100;
+
+    return percentage
+        .clamp(0.0, 100.0)
+        .toDouble();
   }
 
   // ============================================================
@@ -160,7 +271,7 @@ class AttendanceService {
   }
 
   // ============================================================
-  // COUNT PRESENT
+  // PRESENT
   // ============================================================
 
   int countPresent(
@@ -172,7 +283,7 @@ class AttendanceService {
   }
 
   // ============================================================
-  // COUNT ABSENT
+  // ABSENT
   // ============================================================
 
   int countAbsent(
@@ -184,7 +295,7 @@ class AttendanceService {
   }
 
   // ============================================================
-  // COUNT LEAVE
+  // LEAVE
   // ============================================================
 
   int countLeave(
@@ -196,7 +307,7 @@ class AttendanceService {
   }
 
   // ============================================================
-  // COUNT LATE
+  // LATE
   // ============================================================
 
   int countLate(

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../core/constants/collection_names.dart';
 import '../models/application_model.dart';
 
@@ -15,6 +16,10 @@ class ApplicationService {
   final FirebaseAuth _auth =
       FirebaseAuth.instance;
 
+  // ============================================================
+  // CURRENT USER ID
+  // ============================================================
+
   String get _uid {
     final user = _auth.currentUser;
 
@@ -24,6 +29,10 @@ class ApplicationService {
 
     return user.uid;
   }
+
+  // ============================================================
+  // APPLICATIONS COLLECTION
+  // ============================================================
 
   CollectionReference<Map<String, dynamic>>
   get _applications {
@@ -50,25 +59,40 @@ class ApplicationService {
   }) async {
     final uid = _uid;
 
-    // Prevent duplicate application
-    // for the same batch.
-    final existing = await _applications
+    // ----------------------------------------------------------
+    // Get current student's applications.
+    //
+    // We only use one where condition so Firestore
+    // does not require a composite index.
+    // ----------------------------------------------------------
+
+    final existingSnapshot = await _applications
         .where(
       'studentId',
       isEqualTo: uid,
     )
-        .where(
-      'batchId',
-      isEqualTo: batchId,
-    )
-        .limit(1)
         .get();
 
-    if (existing.docs.isNotEmpty) {
-      throw Exception(
-        'You have already applied for this batch.',
-      );
+    // ----------------------------------------------------------
+    // Check duplicate batch locally.
+    // ----------------------------------------------------------
+
+    for (final doc in existingSnapshot.docs) {
+      final data = doc.data();
+
+      final existingBatchId =
+          data['batchId']?.toString() ?? '';
+
+      if (existingBatchId == batchId) {
+        throw Exception(
+          'You have already applied for this batch.',
+        );
+      }
     }
+
+    // ----------------------------------------------------------
+    // Create new application document
+    // ----------------------------------------------------------
 
     final docRef = _applications.doc();
 
@@ -88,6 +112,10 @@ class ApplicationService {
       status: 'submitted',
     );
 
+    // ----------------------------------------------------------
+    // Save application to Firestore
+    // ----------------------------------------------------------
+
     await docRef.set(
       application.toFirestore(),
     );
@@ -102,25 +130,59 @@ class ApplicationService {
   Future<ApplicationModel?> getMyApplication() async {
     final uid = _uid;
 
+    // ----------------------------------------------------------
+    // Only filter by studentId.
+    //
+    // No orderBy here, so composite index is not required.
+    // ----------------------------------------------------------
+
     final snapshot = await _applications
         .where(
       'studentId',
       isEqualTo: uid,
     )
-        .orderBy(
-      'createdAt',
-      descending: true,
-    )
-        .limit(1)
         .get();
 
     if (snapshot.docs.isEmpty) {
       return null;
     }
 
-    return ApplicationModel.fromFirestore(
-      snapshot.docs.first,
-    );
+    // ----------------------------------------------------------
+    // Convert Firestore documents into ApplicationModel
+    // ----------------------------------------------------------
+
+    final applications = snapshot.docs
+        .map(
+          (doc) => ApplicationModel.fromFirestore(doc),
+    )
+        .toList();
+
+    // ----------------------------------------------------------
+    // Sort locally by createdAt.
+    //
+    // Newest application comes first.
+    // ----------------------------------------------------------
+
+    applications.sort((a, b) {
+      final aDate = a.createdAt;
+      final bDate = b.createdAt;
+
+      if (aDate == null && bDate == null) {
+        return 0;
+      }
+
+      if (aDate == null) {
+        return 1;
+      }
+
+      if (bDate == null) {
+        return -1;
+      }
+
+      return bDate.compareTo(aDate);
+    });
+
+    return applications.first;
   }
 
   // ============================================================
@@ -130,12 +192,14 @@ class ApplicationService {
   Future<ApplicationModel?> getApplicationById(
       String applicationId,
       ) async {
-    if (applicationId.trim().isEmpty) {
+    final trimmedId = applicationId.trim();
+
+    if (trimmedId.isEmpty) {
       return null;
     }
 
     final doc = await _applications
-        .doc(applicationId)
+        .doc(trimmedId)
         .get();
 
     if (!doc.exists) {
@@ -145,7 +209,10 @@ class ApplicationService {
     final application =
     ApplicationModel.fromFirestore(doc);
 
+    // ----------------------------------------------------------
     // Student can only view their own application.
+    // ----------------------------------------------------------
+
     if (application.studentId != _uid) {
       throw Exception(
         'You are not allowed to view this application.',

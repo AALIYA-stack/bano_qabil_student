@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
@@ -8,6 +9,7 @@ import '../../../../models/campus_model.dart';
 import '../../../../models/course_model.dart';
 import '../../../../services/batch_service.dart';
 import '../../../../services/campus_service.dart';
+import '../../applications/screen/application_form_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final CourseModel course;
@@ -31,6 +33,7 @@ class _CourseDetailScreenState
   @override
   void initState() {
     super.initState();
+
     _batchFuture = _loadBatchOptions();
   }
 
@@ -43,6 +46,10 @@ class _CourseDetailScreenState
     final List<_BatchOption> result = [];
 
     for (final batch in batches) {
+      if (batch.campusId.trim().isEmpty) {
+        continue;
+      }
+
       final campus =
       await CampusService.instance.getCampusById(
         batch.campusId,
@@ -69,7 +76,7 @@ class _CourseDetailScreenState
     await _batchFuture;
   }
 
-  void _applyNow() {
+  Future<void> _applyNow() async {
     if (_selectedBatchId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -78,22 +85,71 @@ class _CourseDetailScreenState
           ),
         ),
       );
+
       return;
-
-
     }
 
-    final selected = _selectedBatchId!;
+    final options = await _batchFuture;
 
-    Navigator.push(
+    _BatchOption? selectedOption;
+
+    for (final option in options) {
+      if (option.batch.id == _selectedBatchId) {
+        selectedOption = option;
+        break;
+      }
+    }
+
+    if (selectedOption == null) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Selected batch is no longer available.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    if (selectedOption.batch.seatsLeft <= 0) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This batch has no seats available.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    if (!mounted) return;
+
+    final submitted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => _ApplicationPlaceholderScreen(
+        builder: (_) => ApplicationFormScreen(
           course: widget.course,
-          batchId: selected,
+          batch: selectedOption!.batch,
+          campus: selectedOption.campus,
         ),
       ),
     );
+
+    if (submitted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your application has been submitted.',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -108,15 +164,25 @@ class _CourseDetailScreenState
           ),
         ),
       ),
+
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: ElevatedButton(
-            onPressed: _applyNow,
-            child: const Text('Apply Now'),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _applyNow,
+              child: const Text(
+                'Apply Now',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ),
       ),
+
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: SingleChildScrollView(
@@ -155,7 +221,8 @@ class _CourseDetailScreenState
               const SizedBox(height: 10),
 
               FadeSlideAnimation(
-                delay: const Duration(milliseconds: 150),
+                delay:
+                const Duration(milliseconds: 150),
                 child: Text(
                   widget.course.description.isEmpty
                       ? 'Learn practical IT skills through structured training and hands-on assignments.'
@@ -182,6 +249,19 @@ class _CourseDetailScreenState
                 ),
               ),
 
+              const SizedBox(height: 8),
+
+              const FadeSlideAnimation(
+                delay: Duration(milliseconds: 220),
+                child: Text(
+                  'Select a campus and batch to continue.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 12),
 
               FutureBuilder<List<_BatchOption>>(
@@ -192,7 +272,8 @@ class _CourseDetailScreenState
                     return const Padding(
                       padding: EdgeInsets.all(30),
                       child: Center(
-                        child: CircularProgressIndicator(),
+                        child:
+                        CircularProgressIndicator(),
                       ),
                     );
                   }
@@ -227,8 +308,7 @@ class _CourseDetailScreenState
                               milliseconds:
                               250 + (index * 80),
                             ),
-                            child:
-                            _BatchCard(
+                            child: _BatchCard(
                               option: option,
                               selected:
                               _selectedBatchId ==
@@ -298,7 +378,9 @@ class _CourseHeader extends StatelessWidget {
               size: 30,
             ),
           ),
+
           const SizedBox(height: 18),
+
           Text(
             course.name,
             style: const TextStyle(
@@ -307,7 +389,9 @@ class _CourseHeader extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+
           const SizedBox(height: 12),
+
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -482,7 +566,8 @@ class _BatchCard extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   _InfoRow(
-                    icon: Icons.calendar_today_outlined,
+                    icon:
+                    Icons.calendar_today_outlined,
                     text:
                     '${batch.classDay} • ${batch.classTime}',
                   ),
@@ -490,7 +575,8 @@ class _BatchCard extends StatelessWidget {
                   const SizedBox(height: 7),
 
                   _InfoRow(
-                    icon: Icons.meeting_room_outlined,
+                    icon:
+                    Icons.meeting_room_outlined,
                     text:
                     '${batch.room} • Starts $startDate',
                   ),
@@ -498,7 +584,8 @@ class _BatchCard extends StatelessWidget {
                   const SizedBox(height: 7),
 
                   _InfoRow(
-                    icon: Icons.event_seat_outlined,
+                    icon:
+                    Icons.event_seat_outlined,
                     text:
                     '${batch.seatsLeft} seats available',
                   ),
@@ -565,7 +652,8 @@ class _EmptyCampusCard extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+        BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.border,
         ),
@@ -613,7 +701,8 @@ class _ErrorCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+        BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -632,36 +721,6 @@ class _ErrorCard extends StatelessWidget {
             child: const Text('Retry'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// Temporary navigation target.
-// Actual application form comes in the next step.
-class _ApplicationPlaceholderScreen
-    extends StatelessWidget {
-  final CourseModel course;
-  final String batchId;
-
-  const _ApplicationPlaceholderScreen({
-    required this.course,
-    required this.batchId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Application'),
-      ),
-      body: Center(
-        child: Text(
-          'Application form\n\n'
-              'Course: ${course.name}\n'
-              'Batch: $batchId',
-          textAlign: TextAlign.center,
-        ),
       ),
     );
   }
