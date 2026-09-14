@@ -24,18 +24,35 @@ class AppNotification {
   factory AppNotification.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc,
       ) {
-    final data = doc.data() ?? {};
+    final Map<String, dynamic> data =
+        doc.data() ?? <String, dynamic>{};
+
+    DateTime? parsedCreatedAt;
+
+    final dynamic createdAtValue =
+    data['createdAt'];
+
+    if (createdAtValue is Timestamp) {
+      parsedCreatedAt =
+          createdAtValue.toDate();
+    } else if (createdAtValue is DateTime) {
+      parsedCreatedAt = createdAtValue;
+    } else if (createdAtValue is String) {
+      parsedCreatedAt =
+          DateTime.tryParse(createdAtValue);
+    }
 
     return AppNotification(
       id: doc.id,
       title: data['title']?.toString() ?? '',
       message: data['message']?.toString() ?? '',
       type: data['type']?.toString() ?? 'general',
-      studentId: data['studentId']?.toString() ?? '',
-      isRead: data['isRead'] as bool? ?? false,
-      relatedId: data['relatedId']?.toString(),
-      createdAt:
-      (data['createdAt'] as Timestamp?)?.toDate(),
+      studentId:
+      data['studentId']?.toString() ?? '',
+      isRead: data['isRead'] == true,
+      relatedId:
+      data['relatedId']?.toString(),
+      createdAt: parsedCreatedAt,
     );
   }
 
@@ -47,9 +64,9 @@ class AppNotification {
       'studentId': studentId,
       'isRead': isRead,
       'relatedId': relatedId,
-      'createdAt': createdAt == null
-          ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(createdAt!),
+      'createdAt': createdAt != null
+          ? Timestamp.fromDate(createdAt!)
+          : FieldValue.serverTimestamp(),
     };
   }
 }

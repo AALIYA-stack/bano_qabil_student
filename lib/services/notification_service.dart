@@ -16,18 +16,22 @@ class NotificationService {
   final FirebaseAuth _auth =
       FirebaseAuth.instance;
 
+  // =========================
+  // CURRENT USER UID
+  // =========================
   String get _uid {
-    final user = _auth.currentUser;
+    final User? user = _auth.currentUser;
 
     if (user == null) {
-      throw Exception(
-        'User is not logged in.',
-      );
+      throw Exception('User is not logged in.');
     }
 
     return user.uid;
   }
 
+  // =========================
+  // NOTIFICATIONS COLLECTION
+  // =========================
   CollectionReference<Map<String, dynamic>>
   get _notifications {
     return _firestore.collection(
@@ -35,68 +39,146 @@ class NotificationService {
     );
   }
 
+  // =========================
+  // GET MY NOTIFICATIONS
+  // =========================
   Future<List<AppNotification>>
   getMyNotifications() async {
-    final snapshot =
-    await _notifications
-        .where(
-      'studentId',
-      isEqualTo: _uid,
-    )
-        .get();
+    try {
+      final String uid = _uid;
 
-    final notifications =
-    snapshot.docs
-        .map(
-          (doc) =>
-          AppNotification
-              .fromFirestore(doc),
-    )
-        .toList();
+      print('================================');
+      print('LOADING NOTIFICATIONS');
+      print('CURRENT USER UID: $uid');
 
-    notifications.sort((a, b) {
-      final aDate = a.createdAt;
-      final bDate = b.createdAt;
+      final QuerySnapshot<Map<String, dynamic>>
+      snapshot = await _notifications
+          .where(
+        'studentId',
+        isEqualTo: uid,
+      )
+          .get();
 
-      if (aDate == null &&
-          bDate == null) {
-        return 0;
-      }
+      print(
+        'NOTIFICATIONS FOUND: ${snapshot.docs.length}',
+      );
 
-      if (aDate == null) {
-        return 1;
-      }
+      final List<AppNotification>
+      notifications = snapshot.docs
+          .map(
+            (doc) =>
+            AppNotification.fromFirestore(
+              doc,
+            ),
+      )
+          .toList();
 
-      if (bDate == null) {
-        return -1;
-      }
+      notifications.sort((a, b) {
+        final DateTime? aDate = a.createdAt;
+        final DateTime? bDate = b.createdAt;
 
-      return bDate.compareTo(aDate);
-    });
+        if (aDate == null && bDate == null) {
+          return 0;
+        }
 
-    return notifications;
+        if (aDate == null) {
+          return 1;
+        }
+
+        if (bDate == null) {
+          return -1;
+        }
+
+        return bDate.compareTo(aDate);
+      });
+
+      print('================================');
+
+      return notifications;
+    } on FirebaseException catch (e) {
+      print('================================');
+      print('NOTIFICATION FIREBASE ERROR');
+      print('CODE: ${e.code}');
+      print('MESSAGE: ${e.message}');
+      print('================================');
+
+      throw Exception(
+        'Unable to load notifications: '
+            '${e.message ?? e.code}',
+      );
+    }
   }
 
+  // =========================
+  // GET UNREAD COUNT
+  // =========================
   Future<int> getUnreadCount() async {
-    final snapshot =
-    await _notifications
-        .where(
-      'studentId',
-      isEqualTo: _uid,
-    )
-        .where(
-      'isRead',
-      isEqualTo: false,
-    )
-        .get();
+    try {
+      final QuerySnapshot<Map<String, dynamic>>
+      snapshot = await _notifications
+          .where(
+        'studentId',
+        isEqualTo: _uid,
+      )
+          .where(
+        'isRead',
+        isEqualTo: false,
+      )
+          .get();
 
-    return snapshot.docs.length;
+      return snapshot.docs.length;
+    } on FirebaseException catch (e) {
+      print('Unread count error: ${e.code}');
+
+      throw Exception(
+        'Unable to load unread notifications: '
+            '${e.message ?? e.code}',
+      );
+    }
   }
 
+  // =========================
+  // GET SINGLE NOTIFICATION
+  // =========================
+  Future<AppNotification?>
+  getNotificationById(
+      String notificationId,
+      ) async {
+    try {
+      final DocumentSnapshot<Map<String, dynamic>>
+      doc = await _notifications
+          .doc(notificationId)
+          .get();
+
+      if (!doc.exists) {
+        return null;
+      }
+
+      final AppNotification notification =
+      AppNotification.fromFirestore(doc);
+
+      if (notification.studentId != _uid) {
+        throw Exception(
+          'You are not allowed to view this notification.',
+        );
+      }
+
+      return notification;
+    } on FirebaseException catch (e) {
+      throw Exception(
+        'Unable to load notification: '
+            '${e.message ?? e.code}',
+      );
+    }
+  }
+
+  // =========================
+  // MARK AS READ
+  // =========================
   Future<void> markAsRead(
       String notificationId,
       ) async {
-    final notification =
+    final AppNotification? notification =
     await getNotificationById(
       notificationId,
     );
@@ -107,6 +189,10 @@ class NotificationService {
       );
     }
 
+    if (notification.isRead) {
+      return;
+    }
+
     await _notifications
         .doc(notificationId)
         .update({
@@ -114,9 +200,12 @@ class NotificationService {
     });
   }
 
+  // =========================
+  // MARK ALL AS READ
+  // =========================
   Future<void> markAllAsRead() async {
-    final snapshot =
-    await _notifications
+    final QuerySnapshot<Map<String, dynamic>>
+    snapshot = await _notifications
         .where(
       'studentId',
       isEqualTo: _uid,
@@ -131,11 +220,10 @@ class NotificationService {
       return;
     }
 
-    final batch =
+    final WriteBatch batch =
     _firestore.batch();
 
-    for (final doc
-    in snapshot.docs) {
+    for (final doc in snapshot.docs) {
       batch.update(
         doc.reference,
         {
@@ -145,33 +233,5 @@ class NotificationService {
     }
 
     await batch.commit();
-  }
-
-  Future<AppNotification?>
-  getNotificationById(
-      String notificationId,
-      ) async {
-    final doc =
-    await _notifications
-        .doc(notificationId)
-        .get();
-
-    if (!doc.exists) {
-      return null;
-    }
-
-    final notification =
-    AppNotification.fromFirestore(
-      doc,
-    );
-
-    if (notification.studentId !=
-        _uid) {
-      throw Exception(
-        'You are not allowed to view this notification.',
-      );
-    }
-
-    return notification;
   }
 }

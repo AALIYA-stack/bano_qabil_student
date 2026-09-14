@@ -12,7 +12,8 @@ import 'module_service.dart';
 class ProgressService {
   ProgressService._();
 
-  static final ProgressService instance = ProgressService._();
+  static final ProgressService instance =
+  ProgressService._();
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
@@ -20,14 +21,34 @@ class ProgressService {
   final FirebaseAuth _auth =
       FirebaseAuth.instance;
 
+  // ============================================================
+  // CURRENT USER UID
+  // ============================================================
+
   String get _uid {
-    final user = _auth.currentUser;
+    final User? user = _auth.currentUser;
 
     if (user == null) {
       throw Exception('User is not logged in.');
     }
 
     return user.uid;
+  }
+
+  // ============================================================
+  // DEFAULT CAREER PROGRESS
+  // ============================================================
+
+  CareerProgressModel _defaultCareerProgress() {
+    return CareerProgressModel(
+      studentId: _uid,
+      cvReady: false,
+      githubReady: false,
+      projectsCompleted: 0,
+      mockInterviewDone: false,
+      jobsApplied: 0,
+      updatedAt: null,
+    );
   }
 
   // ============================================================
@@ -38,190 +59,250 @@ class ProgressService {
     required String batchId,
     required String courseId,
   }) async {
-    final uid = _uid;
+    final String uid = _uid;
+
+    final String requiredBatchId =
+    batchId.trim();
+
+    final String requiredCourseId =
+    courseId.trim();
 
     double attendancePercentage = 0.0;
-
     double assignmentAverage = 0.0;
 
     int totalModules = 0;
     int completedModules = 0;
 
-    // ============================================================
-    // 1. ATTENDANCE
-    // ============================================================
+    // ==========================================================
+    // ATTENDANCE
+    // ==========================================================
 
     try {
-      final attendanceRecords =
-      await AttendanceService.instance.getMyAttendance(
-        batchId: batchId,
-      );
+      if (requiredBatchId.isEmpty) {
+        debugPrint(
+          'ATTENDANCE: batchId is empty.',
+        );
+      } else {
+        final List attendanceRecords =
+        await AttendanceService.instance
+            .getMyAttendance(
+          batchId: requiredBatchId,
+        );
 
-      attendancePercentage =
-          AttendanceService.instance.calculatePercentage(
-            attendanceRecords,
-          );
+        attendancePercentage =
+            AttendanceService.instance
+                .calculatePercentage(
+              attendanceRecords.cast(),
+            );
 
-      debugPrint(
-        'Student attendance: $attendancePercentage%',
-      );
+        debugPrint(
+          'Student UID: $uid',
+        );
+
+        debugPrint(
+          'Progress batchId: $requiredBatchId',
+        );
+
+        debugPrint(
+          'Student attendance: '
+              '$attendancePercentage%',
+        );
+      }
     } catch (e) {
       debugPrint(
-        'Attendance skipped: $e',
+        'Attendance calculation failed: $e',
       );
 
       attendancePercentage = 0.0;
     }
 
-    // ============================================================
-    // 2. ASSIGNMENT PERFORMANCE
-    // ============================================================
-    //
-    // Correct formula:
-    //
-    // Total obtained marks
-    // -------------------- x 100
-    // Total possible marks
-    //
-    // Example:
-    // 80/100 + 15/20
-    // = 95/120
-    // = 79.17%
-    //
-    // ============================================================
+    // ==========================================================
+    // ASSIGNMENTS
+    // ==========================================================
 
     try {
-      final snapshot = await _firestore
-          .collection(
-        CollectionNames.submissions,
-      )
-          .where(
-        'studentId',
-        isEqualTo: uid,
-      )
-          .where(
-        'batchId',
-        isEqualTo: batchId,
-      )
-          .get();
+      if (requiredBatchId.isEmpty) {
+        debugPrint(
+          'ASSIGNMENTS: batchId is empty.',
+        );
+      } else {
+        final QuerySnapshot<
+            Map<String, dynamic>>
+        snapshot =
+        await _firestore
+            .collection(
+          CollectionNames.submissions,
+        )
+            .where(
+          'studentId',
+          isEqualTo: uid,
+        )
+            .where(
+          'batchId',
+          isEqualTo: requiredBatchId,
+        )
+            .get();
 
-      double obtainedMarks = 0.0;
-      double totalPossibleMarks = 0.0;
+        double obtainedMarks = 0.0;
+        double totalPossibleMarks = 0.0;
 
-      for (final submissionDoc in snapshot.docs) {
-        final data = submissionDoc.data();
+        debugPrint(
+          'Total submissions found: '
+              '${snapshot.docs.length}',
+        );
 
-        final marksValue = data['marks'];
+        for (final submissionDoc
+        in snapshot.docs) {
+          final Map<String, dynamic> data =
+          submissionDoc.data();
 
-        if (marksValue == null) {
-          continue;
-        }
+          final dynamic marksValue =
+          data['marks'];
 
-        double? marks;
-
-        if (marksValue is num) {
-          marks = marksValue.toDouble();
-        } else if (marksValue is String) {
-          marks = double.tryParse(
-            marksValue,
-          );
-        }
-
-        if (marks == null) {
-          continue;
-        }
-
-        final assignmentId =
-            data['assignmentId']?.toString().trim() ?? '';
-
-        if (assignmentId.isEmpty) {
-          continue;
-        }
-
-        try {
-          final assignmentDoc = await _firestore
-              .collection(
-            CollectionNames.assignments,
-          )
-              .doc(assignmentId)
-              .get();
-
-          if (!assignmentDoc.exists) {
+          if (marksValue == null) {
+            debugPrint(
+              'Submission ${submissionDoc.id}: '
+                  'marks not available yet.',
+            );
             continue;
           }
 
-          final assignmentData =
-          assignmentDoc.data();
+          double? marks;
 
-          if (assignmentData == null) {
+          if (marksValue is num) {
+            marks = marksValue.toDouble();
+          } else if (marksValue is String) {
+            marks = double.tryParse(
+              marksValue,
+            );
+          }
+
+          if (marks == null) {
             continue;
           }
 
-          final totalMarksValue =
-          assignmentData['totalMarks'];
+          final String assignmentId =
+              data['assignmentId']
+                  ?.toString()
+                  .trim() ??
+                  '';
 
-          double? totalMarks;
-
-          if (totalMarksValue is num) {
-            totalMarks =
-                totalMarksValue.toDouble();
-          } else if (totalMarksValue is String) {
-            totalMarks =
-                double.tryParse(totalMarksValue);
-          }
-
-          if (totalMarks == null ||
-              totalMarks <= 0) {
+          if (assignmentId.isEmpty) {
             continue;
           }
 
-          obtainedMarks += marks.clamp(
-            0,
-            totalMarks,
-          );
+          try {
+            final DocumentSnapshot<
+                Map<String, dynamic>>
+            assignmentDoc =
+            await _firestore
+                .collection(
+              CollectionNames.assignments,
+            )
+                .doc(assignmentId)
+                .get();
 
-          totalPossibleMarks += totalMarks;
-        } catch (e) {
-          debugPrint(
-            'Could not load assignment '
-                '$assignmentId: $e',
-          );
+            if (!assignmentDoc.exists) {
+              debugPrint(
+                'Assignment not found: '
+                    '$assignmentId',
+              );
+              continue;
+            }
+
+            final Map<String, dynamic>?
+            assignmentData =
+            assignmentDoc.data();
+
+            if (assignmentData == null) {
+              continue;
+            }
+
+            final dynamic totalMarksValue =
+            assignmentData['totalMarks'];
+
+            double? totalMarks;
+
+            if (totalMarksValue is num) {
+              totalMarks =
+                  totalMarksValue.toDouble();
+            } else if (totalMarksValue is String) {
+              totalMarks =
+                  double.tryParse(
+                    totalMarksValue,
+                  );
+            }
+
+            if (totalMarks == null ||
+                totalMarks <= 0) {
+              continue;
+            }
+
+            final double safeMarks =
+            marks.clamp(
+              0.0,
+              totalMarks,
+            );
+
+            obtainedMarks += safeMarks;
+            totalPossibleMarks +=
+                totalMarks;
+          } catch (e) {
+            debugPrint(
+              'Could not load assignment '
+                  '$assignmentId: $e',
+            );
+          }
         }
+
+        if (totalPossibleMarks > 0) {
+          assignmentAverage =
+              (obtainedMarks /
+                  totalPossibleMarks) *
+                  100;
+
+          assignmentAverage =
+              assignmentAverage
+                  .clamp(0.0, 100.0)
+                  .toDouble();
+        } else {
+          assignmentAverage = 0.0;
+        }
+
+        debugPrint(
+          'Assignment performance: '
+              '$assignmentAverage%',
+        );
       }
-
-      if (totalPossibleMarks > 0) {
-        assignmentAverage =
-            (obtainedMarks / totalPossibleMarks) *
-                100;
-
-        assignmentAverage =
-            assignmentAverage.clamp(0, 100);
-      }
-
-      debugPrint(
-        'Assignment performance: '
-            '$assignmentAverage%',
-      );
     } catch (e) {
       debugPrint(
-        'Assignment calculation skipped: $e',
+        'Assignment calculation failed: $e',
       );
 
       assignmentAverage = 0.0;
     }
 
-    // ============================================================
-    // 3. COURSE MODULES
-    // ============================================================
+    // ==========================================================
+    // COURSE MODULES
+    // ==========================================================
 
-    if (courseId.trim().isNotEmpty) {
+    if (requiredCourseId.isNotEmpty) {
+      // --------------------------------------------------------
+      // TOTAL MODULES
+      // --------------------------------------------------------
+
       try {
         final modules =
-        await ModuleService.instance.getCourseModules(
-          courseId.trim(),
+        await ModuleService.instance
+            .getCourseModules(
+          requiredCourseId,
         );
 
         totalModules = modules.length;
+
+        debugPrint(
+          'Course ID: $requiredCourseId',
+        );
 
         debugPrint(
           'Total modules: $totalModules',
@@ -234,15 +315,15 @@ class ProgressService {
         totalModules = 0;
       }
 
-      // ==========================================================
-      // 4. MODULE PROGRESS
-      // ==========================================================
+      // --------------------------------------------------------
+      // COMPLETED MODULES
+      // --------------------------------------------------------
 
       try {
         final moduleProgress =
         await ModuleService.instance
             .getMyModuleProgress(
-          courseId.trim(),
+          requiredCourseId,
         );
 
         completedModules =
@@ -253,13 +334,16 @@ class ProgressService {
                 .length;
 
         if (totalModules > 0 &&
-            completedModules > totalModules) {
-          completedModules = totalModules;
+            completedModules >
+                totalModules) {
+          completedModules =
+              totalModules;
         }
 
         debugPrint(
           'Completed modules: '
-              '$completedModules/$totalModules',
+              '$completedModules/'
+              '$totalModules',
         );
       } catch (e) {
         debugPrint(
@@ -270,75 +354,85 @@ class ProgressService {
       }
     }
 
-    // ============================================================
-    // 5. CAREER READINESS
-    // ============================================================
+    // ==========================================================
+    // CAREER PROGRESS
+    // ==========================================================
 
     CareerProgressModel careerProgress;
 
     try {
-      final careerData =
+      final CareerProgressModel?
+      careerData =
       await CareerService.instance
           .getMyCareerProgress();
 
       careerProgress =
           careerData ??
-              CareerProgressModel(
-                studentId: uid,
-                cvReady: false,
-                githubReady: false,
-                projectsCompleted: 0,
-                mockInterviewDone: false,
-                jobsApplied: 0,
-                updatedAt: null,
-              );
+              _defaultCareerProgress();
     } catch (e) {
       debugPrint(
         'Career progress skipped: $e',
       );
 
       careerProgress =
-          CareerProgressModel(
-            studentId: uid,
-            cvReady: false,
-            githubReady: false,
-            projectsCompleted: 0,
-            mockInterviewDone: false,
-            jobsApplied: 0,
-            updatedAt: null,
-          );
+          _defaultCareerProgress();
     }
 
-    // ============================================================
-    // FINAL
-    // ============================================================
+    // ==========================================================
+    // FINAL DEBUG
+    // ==========================================================
 
-    debugPrint('');
     debugPrint(
       '==========================================',
     );
+
     debugPrint(
       '       STUDENT PROGRESS COMPLETE',
     );
+
     debugPrint(
       '==========================================',
     );
+
     debugPrint(
-      'Modules: $completedModules/$totalModules',
+      'Student UID: $uid',
     );
+
     debugPrint(
-      'Attendance: $attendancePercentage%',
+      'Batch ID: $requiredBatchId',
     );
+
     debugPrint(
-      'Assignments: $assignmentAverage%',
+      'Course ID: $requiredCourseId',
     );
+
+    debugPrint(
+      'Modules: '
+          '$completedModules/$totalModules',
+    );
+
+    debugPrint(
+      'Attendance: '
+          '$attendancePercentage%',
+    );
+
+    debugPrint(
+      'Assignments: '
+          '$assignmentAverage%',
+    );
+
     debugPrint(
       'Career: '
           '${careerProgress.readinessPercentage}%',
     );
+
     debugPrint(
       '==========================================',
     );
+
+    // ==========================================================
+    // RETURN PROGRESS MODEL
+    // ==========================================================
 
     return ProgressModel(
       completedModules: completedModules,

@@ -59,13 +59,6 @@ class ApplicationService {
   }) async {
     final uid = _uid;
 
-    // ----------------------------------------------------------
-    // Get current student's applications.
-    //
-    // We only use one where condition so Firestore
-    // does not require a composite index.
-    // ----------------------------------------------------------
-
     final existingSnapshot = await _applications
         .where(
       'studentId',
@@ -73,10 +66,7 @@ class ApplicationService {
     )
         .get();
 
-    // ----------------------------------------------------------
     // Check duplicate batch locally.
-    // ----------------------------------------------------------
-
     for (final doc in existingSnapshot.docs) {
       final data = doc.data();
 
@@ -89,10 +79,6 @@ class ApplicationService {
         );
       }
     }
-
-    // ----------------------------------------------------------
-    // Create new application document
-    // ----------------------------------------------------------
 
     final docRef = _applications.doc();
 
@@ -112,10 +98,6 @@ class ApplicationService {
       status: 'submitted',
     );
 
-    // ----------------------------------------------------------
-    // Save application to Firestore
-    // ----------------------------------------------------------
-
     await docRef.set(
       application.toFirestore(),
     );
@@ -130,12 +112,6 @@ class ApplicationService {
   Future<ApplicationModel?> getMyApplication() async {
     final uid = _uid;
 
-    // ----------------------------------------------------------
-    // Only filter by studentId.
-    //
-    // No orderBy here, so composite index is not required.
-    // ----------------------------------------------------------
-
     final snapshot = await _applications
         .where(
       'studentId',
@@ -147,22 +123,13 @@ class ApplicationService {
       return null;
     }
 
-    // ----------------------------------------------------------
-    // Convert Firestore documents into ApplicationModel
-    // ----------------------------------------------------------
-
     final applications = snapshot.docs
         .map(
           (doc) => ApplicationModel.fromFirestore(doc),
     )
         .toList();
 
-    // ----------------------------------------------------------
     // Sort locally by createdAt.
-    //
-    // Newest application comes first.
-    // ----------------------------------------------------------
-
     applications.sort((a, b) {
       final aDate = a.createdAt;
       final bDate = b.createdAt;
@@ -208,10 +175,6 @@ class ApplicationService {
 
     final application =
     ApplicationModel.fromFirestore(doc);
-
-    // ----------------------------------------------------------
-    // Student can only view their own application.
-    // ----------------------------------------------------------
 
     if (application.studentId != _uid) {
       throw Exception(

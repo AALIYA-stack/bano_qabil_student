@@ -7,6 +7,7 @@ import '../../../core/widgets/loading_widget.dart';
 import '../../../core/widgets/quick_action_card.dart';
 import '../../../core/widgets/welcome_header.dart';
 import '../../../models/student_dashboard_model.dart';
+import '../../../services/seed_service.dart';
 import '../../../services/student_service.dart';
 
 import '../../auth/screens/attendance/screens/attendance_screen.dart';
@@ -31,8 +32,9 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState
     extends State<StudentHomeScreen> {
-  late Future<StudentDashboardModel>
-  _dashboardFuture;
+  late Future<StudentDashboardModel> _dashboardFuture;
+
+  bool _isSeeding = false;
 
   @override
   void initState() {
@@ -46,8 +48,7 @@ class _StudentHomeScreenState
 
   void _loadDashboard() {
     _dashboardFuture =
-        StudentHomeService.instance
-            .getDashboard();
+        StudentHomeService.instance.getDashboard();
   }
 
   // ============================================================
@@ -65,6 +66,57 @@ class _StudentHomeScreenState
   }
 
   // ============================================================
+  // SEED DEMO STUDENTS
+  // ============================================================
+
+  Future<void> _seedDemoStudents() async {
+    if (_isSeeding) return;
+
+    setState(() {
+      _isSeeding = true;
+    });
+
+    try {
+      await SeedService.instance.seedOnlyStudents();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              '12 demo students seeded successfully!',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Seed failed: $e',
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSeeding = false;
+        });
+      }
+    }
+  }
+
+  // ============================================================
   // NAVIGATION
   // ============================================================
 
@@ -72,8 +124,7 @@ class _StudentHomeScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-        const NotificationsScreen(),
+        builder: (_) => const NotificationsScreen(),
       ),
     ).then((_) {
       if (mounted) {
@@ -87,8 +138,7 @@ class _StudentHomeScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-        const AttendanceScreen(),
+        builder: (_) => const AttendanceScreen(),
       ),
     );
   }
@@ -97,8 +147,7 @@ class _StudentHomeScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-        const AssignmentsScreen(),
+        builder: (_) => const AssignmentsScreen(),
       ),
     );
   }
@@ -107,8 +156,7 @@ class _StudentHomeScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-        const CareerReadinessScreen(),
+        builder: (_) => const CareerReadinessScreen(),
       ),
     );
   }
@@ -128,8 +176,7 @@ class _StudentHomeScreenState
           content: Text(
             'Open Courses from the bottom navigation.',
           ),
-          behavior:
-          SnackBarBehavior.floating,
+          behavior: SnackBarBehavior.floating,
         ),
       );
   }
@@ -141,14 +188,38 @@ class _StudentHomeScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-      AppColors.background,
+      backgroundColor: AppColors.background,
+
+      // ========================================================
+      // TEMPORARY SEED BUTTON
+      // ========================================================
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed:
+        _isSeeding ? null : _seedDemoStudents,
+        icon: _isSeeding
+            ? const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        )
+            : const Icon(
+          Icons.cloud_upload_outlined,
+        ),
+        label: Text(
+          _isSeeding
+              ? 'Seeding...'
+              : 'Seed Demo Data',
+        ),
+      ),
+
       body: SafeArea(
-        child: FutureBuilder<
-            StudentDashboardModel>(
+        child: FutureBuilder<StudentDashboardModel>(
           future: _dashboardFuture,
-          builder:
-              (context, snapshot) {
+          builder: (context, snapshot) {
             // ==================================================
             // LOADING
             // ==================================================
@@ -173,8 +244,7 @@ class _StudentHomeScreenState
             // EMPTY
             // ==================================================
 
-            final data =
-                snapshot.data;
+            final data = snapshot.data;
 
             if (data == null) {
               return _EmptyDashboard(
@@ -189,24 +259,20 @@ class _StudentHomeScreenState
             return RefreshIndicator(
               onRefresh: _refresh,
               color: AppColors.accent,
-              backgroundColor:
-              AppColors.surface,
+              backgroundColor: AppColors.surface,
               displacement: 20,
-              child:
-              CustomScrollView(
+              child: CustomScrollView(
                 physics:
                 const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverPadding(
-                    padding:
-                    const EdgeInsets.fromLTRB(
+                    padding: const EdgeInsets.fromLTRB(
                       20,
                       18,
                       20,
                       32,
                     ),
-                    sliver:
-                    SliverList(
+                    sliver: SliverList(
                       delegate:
                       SliverChildListDelegate(
                         [
@@ -215,10 +281,8 @@ class _StudentHomeScreenState
                           // ====================================
 
                           FadeSlideAnimation(
-                            child:
-                            WelcomeHeader(
-                              name:
-                              data.user.name,
+                            child: WelcomeHeader(
+                              name: data.user.name,
                               onNotificationTap:
                               _openNotifications,
                             ),
@@ -232,19 +296,15 @@ class _StudentHomeScreenState
                           // NOTIFICATION BADGE
                           // ====================================
 
-                          if (data
-                              .unreadNotifications >
-                              0)
+                          if (data.unreadNotifications > 0)
                             _NotificationBanner(
-                              count: data
-                                  .unreadNotifications,
+                              count:
+                              data.unreadNotifications,
                               onTap:
                               _openNotifications,
                             ),
 
-                          if (data
-                              .unreadNotifications >
-                              0)
+                          if (data.unreadNotifications > 0)
                             const SizedBox(
                               height: 18,
                             ),
@@ -254,8 +314,7 @@ class _StudentHomeScreenState
                           // ====================================
 
                           const _SectionLabel(
-                            title:
-                            'Current Course',
+                            title: 'Current Course',
                           ),
 
                           const SizedBox(
@@ -263,12 +322,10 @@ class _StudentHomeScreenState
                           ),
 
                           FadeSlideAnimation(
-                            delay:
-                            const Duration(
+                            delay: const Duration(
                               milliseconds: 100,
                             ),
-                            child:
-                            CurrentCourseCard(
+                            child: CurrentCourseCard(
                               courseName:
                               data.courseName,
                               campus:
@@ -312,8 +369,7 @@ class _StudentHomeScreenState
                           // ====================================
 
                           const _SectionLabel(
-                            title:
-                            'Your Learning',
+                            title: 'Your Learning',
                           ),
 
                           const SizedBox(
@@ -322,16 +378,14 @@ class _StudentHomeScreenState
 
                           Row(
                             crossAxisAlignment:
-                            CrossAxisAlignment
-                                .start,
+                            CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child:
                                 FadeSlideAnimation(
                                   delay:
                                   const Duration(
-                                    milliseconds:
-                                    180,
+                                    milliseconds: 180,
                                   ),
                                   child:
                                   AttendanceSummaryCard(
@@ -350,8 +404,7 @@ class _StudentHomeScreenState
                                 FadeSlideAnimation(
                                   delay:
                                   const Duration(
-                                    milliseconds:
-                                    240,
+                                    milliseconds: 240,
                                   ),
                                   child:
                                   AssignmentSummaryCard(
@@ -384,18 +437,16 @@ class _StudentHomeScreenState
                           // LOW ATTENDANCE WARNING
                           // ====================================
 
-                          if (data
-                              .attendancePercentage <
+                          if (data.attendancePercentage <
                               80 &&
-                              data
-                                  .attendancePercentage >
+                              data.attendancePercentage >
                                   0) ...[
                             const SizedBox(
                               height: 12,
                             ),
                             _AttendanceWarning(
-                              percentage: data
-                                  .attendancePercentage,
+                              percentage:
+                              data.attendancePercentage,
                               onTap:
                               _openAttendance,
                             ),
@@ -410,8 +461,7 @@ class _StudentHomeScreenState
                           // ====================================
 
                           const _SectionLabel(
-                            title:
-                            'Upcoming Class',
+                            title: 'Upcoming Class',
                           ),
 
                           const SizedBox(
@@ -419,8 +469,7 @@ class _StudentHomeScreenState
                           ),
 
                           FadeSlideAnimation(
-                            delay:
-                            const Duration(
+                            delay: const Duration(
                               milliseconds: 300,
                             ),
                             child:
@@ -447,8 +496,7 @@ class _StudentHomeScreenState
                           // ====================================
 
                           const _SectionLabel(
-                            title:
-                            'Quick Actions',
+                            title: 'Quick Actions',
                           ),
 
                           const SizedBox(
@@ -463,10 +511,8 @@ class _StudentHomeScreenState
                             shrinkWrap: true,
                             physics:
                             const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing:
-                            12,
-                            crossAxisSpacing:
-                            12,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
                             childAspectRatio:
                             _getChildAspectRatio(
                               context,
@@ -498,8 +544,7 @@ class _StudentHomeScreenState
                                 delay: 480,
                                 icon: Icons
                                     .notifications_none_rounded,
-                                title:
-                                'Notices',
+                                title: 'Notices',
                                 subtitle:
                                 data.unreadNotifications >
                                     0
@@ -512,8 +557,7 @@ class _StudentHomeScreenState
                                 delay: 530,
                                 icon: Icons
                                     .work_outline_rounded,
-                                title:
-                                'Career',
+                                title: 'Career',
                                 subtitle:
                                 '${data.progress.careerReadinessPercentage.toStringAsFixed(0)}% ready',
                                 onTap:
@@ -561,8 +605,7 @@ class _StudentHomeScreenState
                           // ====================================
 
                           FadeSlideAnimation(
-                            delay:
-                            const Duration(
+                            delay: const Duration(
                               milliseconds: 640,
                             ),
                             child:
@@ -581,19 +624,16 @@ class _StudentHomeScreenState
                           // ====================================
 
                           FadeSlideAnimation(
-                            delay:
-                            const Duration(
+                            delay: const Duration(
                               milliseconds: 700,
                             ),
-                            child:
-                            const Center(
+                            child: const Center(
                               child: Text(
                                 'Keep learning. Keep building. '
                                     'Keep moving forward.',
                                 textAlign:
                                 TextAlign.center,
-                                style:
-                                TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors
                                       .textSecondary,
@@ -687,10 +727,8 @@ class _SectionLabel
       title,
       style: const TextStyle(
         fontSize: 18,
-        fontWeight:
-        FontWeight.w700,
-        color:
-        AppColors.textPrimary,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
       ),
     );
   }
@@ -723,10 +761,8 @@ class _NotificationBanner
         child: Ink(
           padding:
           const EdgeInsets.all(14),
-          decoration:
-          BoxDecoration(
-            color:
-            AppColors.accentLight,
+          decoration: BoxDecoration(
+            color: AppColors.accentLight,
             borderRadius:
             BorderRadius.circular(14),
             border: Border.all(
@@ -741,20 +777,15 @@ class _NotificationBanner
               Container(
                 width: 40,
                 height: 40,
-                decoration:
-                BoxDecoration(
-                  color:
-                  AppColors.surface,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
                   borderRadius:
-                  BorderRadius.circular(
-                    12,
-                  ),
+                  BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons
                       .notifications_active_outlined,
-                  color:
-                  AppColors.accent,
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(
@@ -768,8 +799,8 @@ class _NotificationBanner
                     fontSize: 14,
                     fontWeight:
                     FontWeight.w700,
-                    color: AppColors
-                        .textPrimary,
+                    color:
+                    AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -777,8 +808,7 @@ class _NotificationBanner
                 Icons
                     .arrow_forward_ios_rounded,
                 size: 14,
-                color:
-                AppColors.accent,
+                color: AppColors.accent,
               ),
             ],
           ),
@@ -822,10 +852,8 @@ class _ProgressOverviewCard
     return Container(
       padding:
       const EdgeInsets.all(16),
-      decoration:
-      BoxDecoration(
-        color:
-        AppColors.surface,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius:
         BorderRadius.circular(18),
         border: Border.all(
@@ -838,8 +866,7 @@ class _ProgressOverviewCard
       child: Column(
         children: [
           _ProgressLine(
-            title:
-            'Course Progress',
+            title: 'Course Progress',
             value: module,
             icon:
             Icons.menu_book_outlined,
@@ -848,8 +875,7 @@ class _ProgressOverviewCard
             height: 14,
           ),
           _ProgressLine(
-            title:
-            'Attendance',
+            title: 'Attendance',
             value: attendance,
             icon:
             Icons.calendar_today_outlined,
@@ -858,8 +884,7 @@ class _ProgressOverviewCard
             height: 14,
           ),
           _ProgressLine(
-            title:
-            'Assignments',
+            title: 'Assignments',
             value: assignment,
             icon:
             Icons.assignment_outlined,
@@ -907,18 +932,15 @@ class _ProgressLine
         Container(
           width: 38,
           height: 38,
-          decoration:
-          BoxDecoration(
-            color:
-            AppColors.accentLight,
+          decoration: BoxDecoration(
+            color: AppColors.accentLight,
             borderRadius:
             BorderRadius.circular(11),
           ),
           child: Icon(
             icon,
             size: 20,
-            color:
-            AppColors.accent,
+            color: AppColors.accent,
           ),
         ),
         const SizedBox(
@@ -927,8 +949,7 @@ class _ProgressLine
         Expanded(
           child: Column(
             crossAxisAlignment:
-            CrossAxisAlignment
-                .start,
+            CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment:
@@ -942,8 +963,8 @@ class _ProgressLine
                       fontSize: 13,
                       fontWeight:
                       FontWeight.w600,
-                      color: AppColors
-                          .textPrimary,
+                      color:
+                      AppColors.textPrimary,
                     ),
                   ),
                   Text(
@@ -964,19 +985,14 @@ class _ProgressLine
               ),
               ClipRRect(
                 borderRadius:
-                BorderRadius.circular(
-                  20,
-                ),
+                BorderRadius.circular(20),
                 child:
                 LinearProgressIndicator(
-                  value:
-                  value / 100,
+                  value: value / 100,
                   minHeight: 6,
                   backgroundColor:
-                  AppColors
-                      .accentLight,
-                  color:
-                  AppColors.accent,
+                  AppColors.accentLight,
+                  color: AppColors.accent,
                 ),
               ),
             ],
@@ -1076,10 +1092,8 @@ class _MiniStatus
         vertical: 10,
         horizontal: 8,
       ),
-      decoration:
-      BoxDecoration(
-        color:
-        AppColors.surface,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius:
         BorderRadius.circular(12),
       ),
@@ -1088,16 +1102,14 @@ class _MiniStatus
           Icon(
             icon,
             size: 18,
-            color:
-            AppColors.accent,
+            color: AppColors.accent,
           ),
           const SizedBox(
             height: 4,
           ),
           Text(
             value,
-            style:
-            const TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               fontWeight:
               FontWeight.w700,
@@ -1107,8 +1119,7 @@ class _MiniStatus
           ),
           Text(
             label,
-            style:
-            const TextStyle(
+            style: const TextStyle(
               fontSize: 10,
               color:
               AppColors.textSecondary,
@@ -1147,8 +1158,7 @@ class _AttendanceWarning
         child: Ink(
           padding:
           const EdgeInsets.all(14),
-          decoration:
-          BoxDecoration(
+          decoration: BoxDecoration(
             color:
             Colors.orange.withValues(
               alpha: 0.08,
@@ -1166,8 +1176,7 @@ class _AttendanceWarning
             children: [
               const Icon(
                 Icons.warning_amber_rounded,
-                color:
-                Colors.orange,
+                color: Colors.orange,
               ),
               const SizedBox(
                 width: 10,
@@ -1177,8 +1186,7 @@ class _AttendanceWarning
                   'Your attendance is '
                       '${percentage.toStringAsFixed(0)}%. '
                       'Try to attend upcoming classes regularly.',
-                  style:
-                  const TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     height: 1.4,
                     color:
@@ -1226,10 +1234,8 @@ class _CareerReadinessCard
         child: Ink(
           padding:
           const EdgeInsets.all(18),
-          decoration:
-          BoxDecoration(
-            color:
-            AppColors.surface,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
             borderRadius:
             BorderRadius.circular(18),
             border: Border.all(
@@ -1244,8 +1250,7 @@ class _CareerReadinessCard
               SizedBox(
                 width: 72,
                 height: 72,
-                child:
-                Stack(
+                child: Stack(
                   alignment:
                   Alignment.center,
                   children: [
@@ -1257,8 +1262,7 @@ class _CareerReadinessCard
                         value:
                         safePercentage /
                             100,
-                        strokeWidth:
-                        7,
+                        strokeWidth: 7,
                         backgroundColor:
                         AppColors
                             .accentLight,
@@ -1273,8 +1277,8 @@ class _CareerReadinessCard
                         fontSize: 14,
                         fontWeight:
                         FontWeight.w800,
-                        color:
-                        AppColors.textPrimary,
+                        color: AppColors
+                            .textPrimary,
                       ),
                     ),
                   ],
@@ -1286,8 +1290,7 @@ class _CareerReadinessCard
               Expanded(
                 child: Column(
                   crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+                  CrossAxisAlignment.start,
                   children: [
                     Text(
                       isJobReady
@@ -1324,8 +1327,7 @@ class _CareerReadinessCard
                 Icons
                     .arrow_forward_ios_rounded,
                 size: 15,
-                color:
-                AppColors.accent,
+                color: AppColors.accent,
               ),
             ],
           ),
@@ -1360,12 +1362,10 @@ class _AnimatedAction
       BuildContext context,
       ) {
     return FadeSlideAnimation(
-      delay:
-      Duration(
+      delay: Duration(
         milliseconds: delay,
       ),
-      child:
-      QuickActionCard(
+      child: QuickActionCard(
         icon: icon,
         title: title,
         onTap: onTap,
@@ -1397,14 +1397,11 @@ class _JobReadyTipCard
         borderRadius:
         BorderRadius.circular(18),
         child: Ink(
-          width:
-          double.infinity,
+          width: double.infinity,
           padding:
           const EdgeInsets.all(18),
-          decoration:
-          BoxDecoration(
-            color:
-            AppColors.accentLight,
+          decoration: BoxDecoration(
+            color: AppColors.accentLight,
             borderRadius:
             BorderRadius.circular(18),
             border: Border.all(
@@ -1416,43 +1413,35 @@ class _JobReadyTipCard
           ),
           child: Row(
             crossAxisAlignment:
-            CrossAxisAlignment
-                .start,
+            CrossAxisAlignment.start,
             children: [
               Container(
                 width: 44,
                 height: 44,
-                decoration:
-                BoxDecoration(
-                  color:
-                  AppColors.surface,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
                   borderRadius:
                   BorderRadius.circular(
                     14,
                   ),
                 ),
-                child:
-                const Icon(
+                child: const Icon(
                   Icons
                       .lightbulb_outline_rounded,
-                  color:
-                  AppColors.accent,
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(
                 width: 14,
               ),
               const Expanded(
-                child:
-                Column(
+                child: Column(
                   crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+                  CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Your job-ready journey',
-                      style:
-                      TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight:
                         FontWeight.w700,
@@ -1467,8 +1456,7 @@ class _JobReadyTipCard
                       'Stay consistent with your classes, '
                           'complete assignments and build '
                           'projects to become job-ready.',
-                      style:
-                      TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         height: 1.45,
                         color: AppColors
@@ -1485,8 +1473,7 @@ class _JobReadyTipCard
                 Icons
                     .arrow_forward_ios_rounded,
                 size: 15,
-                color:
-                AppColors.accent,
+                color: AppColors.accent,
               ),
             ],
           ),
@@ -1524,8 +1511,8 @@ class _DashboardLoading
               'Loading your dashboard...',
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors
-                    .textSecondary,
+                color:
+                AppColors.textSecondary,
               ),
             ),
           ],
@@ -1541,8 +1528,7 @@ class _DashboardLoading
 
 class _EmptyDashboard
     extends StatelessWidget {
-  final Future<void> Function()
-  onRefresh;
+  final Future<void> Function() onRefresh;
 
   const _EmptyDashboard({
     required this.onRefresh,
@@ -1567,13 +1553,10 @@ class _EmptyDashboard
             child: Center(
               child: Padding(
                 padding:
-                const EdgeInsets.all(
-                  28,
-                ),
+                const EdgeInsets.all(28),
                 child: Column(
                   mainAxisAlignment:
-                  MainAxisAlignment
-                      .center,
+                  MainAxisAlignment.center,
                   children: [
                     Container(
                       width: 82,
@@ -1583,18 +1566,15 @@ class _EmptyDashboard
                         color: AppColors
                             .accentLight,
                         borderRadius:
-                        BorderRadius
-                            .circular(
+                        BorderRadius.circular(
                           26,
                         ),
                       ),
-                      child:
-                      const Icon(
-                        Icons
-                            .school_outlined,
+                      child: const Icon(
+                        Icons.school_outlined,
                         size: 42,
-                        color: AppColors
-                            .accent,
+                        color:
+                        AppColors.accent,
                       ),
                     ),
                     const SizedBox(
@@ -1604,8 +1584,7 @@ class _EmptyDashboard
                       'Your dashboard is empty',
                       textAlign:
                       TextAlign.center,
-                      style:
-                      TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight:
                         FontWeight.w700,
@@ -1623,8 +1602,7 @@ class _EmptyDashboard
                           'properly enrolled.',
                       textAlign:
                       TextAlign.center,
-                      style:
-                      TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         height: 1.5,
                         color: AppColors
@@ -1635,17 +1613,12 @@ class _EmptyDashboard
                       height: 22,
                     ),
                     OutlinedButton.icon(
-                      onPressed:
-                      onRefresh,
-                      icon:
-                      const Icon(
-                        Icons
-                            .refresh_rounded,
+                      onPressed: onRefresh,
+                      icon: const Icon(
+                        Icons.refresh_rounded,
                       ),
                       label:
-                      const Text(
-                        'Refresh',
-                      ),
+                      const Text('Refresh'),
                     ),
                   ],
                 ),
@@ -1682,8 +1655,7 @@ class _ErrorView
       BuildContext context,
       ) {
     return Center(
-      child:
-      SingleChildScrollView(
+      child: SingleChildScrollView(
         padding:
         const EdgeInsets.all(28),
         child: Column(
@@ -1693,19 +1665,15 @@ class _ErrorView
             Container(
               width: 82,
               height: 82,
-              decoration:
-              BoxDecoration(
-                color: Colors.red
-                    .withValues(
+              decoration: BoxDecoration(
+                color:
+                Colors.red.withValues(
                   alpha: 0.08,
                 ),
                 borderRadius:
-                BorderRadius.circular(
-                  26,
-                ),
+                BorderRadius.circular(26),
               ),
-              child:
-              const Icon(
+              child: const Icon(
                 Icons.cloud_off_rounded,
                 size: 42,
                 color:
@@ -1719,8 +1687,7 @@ class _ErrorView
               'Unable to load dashboard',
               textAlign:
               TextAlign.center,
-              style:
-              TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight:
                 FontWeight.w700,
@@ -1732,38 +1699,29 @@ class _ErrorView
               height: 10,
             ),
             Container(
-              width:
-              double.infinity,
+              width: double.infinity,
               padding:
-              const EdgeInsets.all(
-                14,
-              ),
-              decoration:
-              BoxDecoration(
-                color:
-                AppColors.surface,
+              const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 borderRadius:
-                BorderRadius.circular(
-                  12,
-                ),
+                BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.red
-                      .withValues(
+                  color:
+                  Colors.red.withValues(
                     alpha: 0.20,
                   ),
                 ),
               ),
-              child:
-              SelectableText(
+              child: SelectableText(
                 _message(),
                 textAlign:
                 TextAlign.center,
-                style:
-                const TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
                   height: 1.5,
-                  color: AppColors
-                      .textSecondary,
+                  color:
+                  AppColors.textSecondary,
                 ),
               ),
             ),
@@ -1772,14 +1730,11 @@ class _ErrorView
             ),
             FilledButton.icon(
               onPressed: onRetry,
-              icon:
-              const Icon(
+              icon: const Icon(
                 Icons.refresh_rounded,
               ),
               label:
-              const Text(
-                'Try Again',
-              ),
+              const Text('Try Again'),
             ),
           ],
         ),

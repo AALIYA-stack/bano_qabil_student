@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // AUTH
 // ============================================================
 
+import '../../data/seed_data/seed_data_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
@@ -21,6 +22,11 @@ import '../../features/student/class/screen/my_classes_screen.dart';
 // ============================================================
 
 import '../../features/instructor/screens/instructor_home_screen.dart';
+
+// ============================================================
+// SEED DATA
+// ============================================================
+
 
 class AppRoutes {
   AppRoutes._();
@@ -57,6 +63,13 @@ class AppRoutes {
 
   static const String coordinatorDashboard =
       '/coordinator-dashboard';
+
+  // ------------------------------------------------------------
+  // Seed Data
+  // ------------------------------------------------------------
+
+  static const String seedData =
+      '/seed-data';
 
   // ============================================================
   // ROUTES
@@ -103,6 +116,13 @@ class AppRoutes {
 
       // coordinatorDashboard: (context) =>
       //     const CoordinatorDashboardScreen(),
+
+      // ========================================================
+      // SEED DATA
+      // ========================================================
+
+      seedData: (context) =>
+      const SeedDataScreen(),
     };
   }
 }
