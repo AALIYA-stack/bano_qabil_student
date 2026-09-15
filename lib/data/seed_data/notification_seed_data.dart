@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationSeedData {
   NotificationSeedData._();
 
-  static List<Map<String, dynamic>> get notifications {
+  static List<Map<String, dynamic>> getNotifications(
+      String studentId,
+      ) {
     return [
       {
         'id': 'notification_001',
@@ -11,7 +14,7 @@ class NotificationSeedData {
         'message':
         'Congratulations! Your Flutter Development application has been accepted.',
         'type': 'application',
-        'studentId': 'DEMO_STUDENT_UID',
+        'studentId': studentId,
         'isRead': false,
         'relatedId': 'application_001',
         'createdAt': Timestamp.now(),
@@ -22,7 +25,7 @@ class NotificationSeedData {
         'message':
         'A new Flutter Login UI assignment has been added.',
         'type': 'assignment',
-        'studentId': 'DEMO_STUDENT_UID',
+        'studentId': studentId,
         'isRead': false,
         'relatedId': 'assignment_001',
         'createdAt': Timestamp.now(),
@@ -33,7 +36,7 @@ class NotificationSeedData {
         'message':
         'Your Dart Fundamentals assignment has been marked.',
         'type': 'marks',
-        'studentId': 'DEMO_STUDENT_UID',
+        'studentId': studentId,
         'isRead': true,
         'relatedId': 'assignment_002',
         'createdAt': Timestamp.now(),
@@ -44,11 +47,18 @@ class NotificationSeedData {
         'message':
         'Tomorrow\'s Flutter class will start at 6:30 PM in Lab 02.',
         'type': 'class',
-        'studentId': 'DEMO_STUDENT_UID',
+        'studentId': studentId,
         'isRead': false,
         'relatedId': null,
         'createdAt': Timestamp.now(),
       },
     ];
+  }
+
+  static String? getCurrentStudentId() {
+    final User? user =
+        FirebaseAuth.instance.currentUser;
+
+    return user?.uid;
   }
 }

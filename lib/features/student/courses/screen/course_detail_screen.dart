@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
@@ -8,6 +9,7 @@ import '../../../../models/campus_model.dart';
 import '../../../../models/course_model.dart';
 import '../../../../services/batch_service.dart';
 import '../../../../services/campus_service.dart';
+import '../../applications/screen/application_form_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final CourseModel course;
@@ -31,35 +33,136 @@ class _CourseDetailScreenState
   @override
   void initState() {
     super.initState();
+
     _batchFuture = _loadBatchOptions();
   }
 
+  // ============================================================
+  // LOAD BATCH OPTIONS
+  // ============================================================
+
   Future<List<_BatchOption>> _loadBatchOptions() async {
-    final batches =
-    await BatchService.instance.getBatchesForCourse(
-      widget.course.id,
-    );
+    print('========================================');
+    print('LOADING BATCH OPTIONS');
+    print('COURSE ID FROM SCREEN: ${widget.course.id}');
+    print('COURSE NAME: ${widget.course.name}');
 
-    final List<_BatchOption> result = [];
-
-    for (final batch in batches) {
-      final campus =
-      await CampusService.instance.getCampusById(
-        batch.campusId,
+    try {
+      final batches =
+      await BatchService.instance.getBatchesForCourse(
+        widget.course.id,
       );
 
-      if (campus != null) {
+      print('BATCHES RECEIVED: ${batches.length}');
+
+      final List<_BatchOption> result = [];
+
+      for (final batch in batches) {
+        print('----------------------------------------');
+        print('CHECKING BATCH');
+        print('Batch ID: ${batch.id}');
+        print('Course ID: ${batch.courseId}');
+        print('Campus ID: ${batch.campusId}');
+        print('Is Open: ${batch.isOpen}');
+        print('Seats: ${batch.seats}');
+        print('Enrolled: ${batch.enrolledStudents}');
+        print('Seats Left: ${batch.seatsLeft}');
+
+        // --------------------------------------------------------
+        // CHECK CAMPUS ID
+        // --------------------------------------------------------
+
+        if (batch.campusId.trim().isEmpty) {
+          print('❌ CAMPUS ID IS EMPTY');
+          continue;
+        }
+
+        print(
+          'Getting campus by ID: ${batch.campusId}',
+        );
+
+        // --------------------------------------------------------
+        // LOAD CAMPUS
+        // --------------------------------------------------------
+
+        final campus =
+        await CampusService.instance.getCampusById(
+          batch.campusId,
+        );
+
+        // --------------------------------------------------------
+        // CAMPUS NOT FOUND
+        // --------------------------------------------------------
+
+        if (campus == null) {
+          print(
+            '❌ CAMPUS NOT FOUND: ${batch.campusId}',
+          );
+          continue;
+        }
+
+        // --------------------------------------------------------
+        // CAMPUS FOUND
+        // --------------------------------------------------------
+
+        print('✅ CAMPUS FOUND');
+        print('Campus ID: ${campus.id}');
+        print('Campus Name: ${campus.name}');
+        print('Campus City: ${campus.city}');
+        print('Campus Province: ${campus.province}');
+        print('Campus Active: ${campus.isActive}');
+
+        // --------------------------------------------------------
+        // ADD BATCH OPTION
+        // --------------------------------------------------------
+
         result.add(
           _BatchOption(
             batch: batch,
             campus: campus,
           ),
         );
-      }
-    }
 
-    return result;
+        print('✅ BATCH ADDED TO RESULT');
+      }
+
+      print('----------------------------------------');
+      print(
+        'FINAL BATCH OPTIONS: ${result.length}',
+      );
+
+      if (result.isEmpty) {
+        print('❌ NO BATCH OPTIONS AVAILABLE');
+      } else {
+        print('✅ BATCH OPTIONS AVAILABLE');
+
+        for (final option in result) {
+          print(
+            'OPTION: '
+                '${option.batch.id} | '
+                'Course: ${option.batch.courseId} | '
+                'Campus: ${option.campus.name}',
+          );
+        }
+      }
+
+      print('========================================');
+
+      return result;
+    } catch (e, stackTrace) {
+      print('========================================');
+      print('❌ ERROR LOADING BATCH OPTIONS');
+      print('ERROR: $e');
+      print('STACK TRACE: $stackTrace');
+      print('========================================');
+
+      rethrow;
+    }
   }
+
+  // ============================================================
+  // REFRESH
+  // ============================================================
 
   Future<void> _refresh() async {
     setState(() {
@@ -69,7 +172,11 @@ class _CourseDetailScreenState
     await _batchFuture;
   }
 
-  void _applyNow() {
+  // ============================================================
+  // APPLY NOW
+  // ============================================================
+
+  Future<void> _applyNow() async {
     if (_selectedBatchId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -78,28 +185,82 @@ class _CourseDetailScreenState
           ),
         ),
       );
+
       return;
-
-
     }
 
-    final selected = _selectedBatchId!;
+    final options = await _batchFuture;
 
-    Navigator.push(
+    _BatchOption? selectedOption;
+
+    for (final option in options) {
+      if (option.batch.id == _selectedBatchId) {
+        selectedOption = option;
+        break;
+      }
+    }
+
+    if (selectedOption == null) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Selected batch is no longer available.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    if (selectedOption.batch.seatsLeft <= 0) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This batch has no seats available.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    if (!mounted) return;
+
+    final submitted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => _ApplicationPlaceholderScreen(
+        builder: (_) => ApplicationFormScreen(
           course: widget.course,
-          batchId: selected,
+          batch: selectedOption!.batch,
+          campus: selectedOption.campus,
         ),
       ),
     );
+
+    if (submitted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your application has been submitted.',
+          ),
+        ),
+      );
+    }
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+
       appBar: AppBar(
         title: const Text(
           'Course Details',
@@ -108,15 +269,33 @@ class _CourseDetailScreenState
           ),
         ),
       ),
+
+      // ========================================================
+      // BOTTOM APPLY BUTTON
+      // ========================================================
+
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: ElevatedButton(
-            onPressed: _applyNow,
-            child: const Text('Apply Now'),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _applyNow,
+              child: const Text(
+                'Apply Now',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ),
       ),
+
+      // ========================================================
+      // BODY
+      // ========================================================
+
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: SingleChildScrollView(
@@ -132,6 +311,10 @@ class _CourseDetailScreenState
             crossAxisAlignment:
             CrossAxisAlignment.start,
             children: [
+              // ==================================================
+              // COURSE HEADER
+              // ==================================================
+
               FadeSlideAnimation(
                 child: _CourseHeader(
                   course: widget.course,
@@ -139,6 +322,10 @@ class _CourseDetailScreenState
               ),
 
               const SizedBox(height: 22),
+
+              // ==================================================
+              // ABOUT COURSE
+              // ==================================================
 
               const FadeSlideAnimation(
                 delay: Duration(milliseconds: 100),
@@ -155,7 +342,8 @@ class _CourseDetailScreenState
               const SizedBox(height: 10),
 
               FadeSlideAnimation(
-                delay: const Duration(milliseconds: 150),
+                delay:
+                const Duration(milliseconds: 150),
                 child: Text(
                   widget.course.description.isEmpty
                       ? 'Learn practical IT skills through structured training and hands-on assignments.'
@@ -170,6 +358,10 @@ class _CourseDetailScreenState
 
               const SizedBox(height: 28),
 
+              // ==================================================
+              // AVAILABLE CAMPUSES
+              // ==================================================
+
               const FadeSlideAnimation(
                 delay: Duration(milliseconds: 200),
                 child: Text(
@@ -182,33 +374,76 @@ class _CourseDetailScreenState
                 ),
               ),
 
+              const SizedBox(height: 8),
+
+              const FadeSlideAnimation(
+                delay: Duration(milliseconds: 220),
+                child: Text(
+                  'Select a campus and batch to continue.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 12),
+
+              // ==================================================
+              // BATCH FUTURE BUILDER
+              // ==================================================
 
               FutureBuilder<List<_BatchOption>>(
                 future: _batchFuture,
                 builder: (context, snapshot) {
+                  // ------------------------------------------------
+                  // LOADING
+                  // ------------------------------------------------
+
                   if (snapshot.connectionState ==
                       ConnectionState.waiting) {
                     return const Padding(
                       padding: EdgeInsets.all(30),
                       child: Center(
-                        child: CircularProgressIndicator(),
+                        child:
+                        CircularProgressIndicator(),
                       ),
                     );
                   }
 
+                  // ------------------------------------------------
+                  // ERROR
+                  // ------------------------------------------------
+
                   if (snapshot.hasError) {
+                    print(
+                      '❌ FUTURE BUILDER ERROR: '
+                          '${snapshot.error}',
+                    );
+
                     return _ErrorCard(
                       onRetry: _refresh,
                     );
                   }
 
+                  // ------------------------------------------------
+                  // DATA
+                  // ------------------------------------------------
+
                   final options =
                       snapshot.data ?? [];
+
+                  // ------------------------------------------------
+                  // EMPTY
+                  // ------------------------------------------------
 
                   if (options.isEmpty) {
                     return const _EmptyCampusCard();
                   }
+
+                  // ------------------------------------------------
+                  // SHOW BATCHES
+                  // ------------------------------------------------
 
                   return Column(
                     children: List.generate(
@@ -227,8 +462,7 @@ class _CourseDetailScreenState
                               milliseconds:
                               250 + (index * 80),
                             ),
-                            child:
-                            _BatchCard(
+                            child: _BatchCard(
                               option: option,
                               selected:
                               _selectedBatchId ==
@@ -255,6 +489,10 @@ class _CourseDetailScreenState
   }
 }
 
+// ==================================================================
+// COURSE HEADER
+// ==================================================================
+
 class _CourseHeader extends StatelessWidget {
   final CourseModel course;
 
@@ -274,7 +512,8 @@ class _CourseHeader extends StatelessWidget {
             AppColors.primaryLight,
           ],
         ),
-        borderRadius: BorderRadius.circular(
+        borderRadius:
+        BorderRadius.circular(
           AppDimensions.radiusXLarge,
         ),
       ),
@@ -298,7 +537,9 @@ class _CourseHeader extends StatelessWidget {
               size: 30,
             ),
           ),
+
           const SizedBox(height: 18),
+
           Text(
             course.name,
             style: const TextStyle(
@@ -307,7 +548,9 @@ class _CourseHeader extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+
           const SizedBox(height: 12),
+
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -316,10 +559,12 @@ class _CourseHeader extends StatelessWidget {
                 icon: Icons.bar_chart_rounded,
                 text: course.level,
               ),
+
               _HeaderChip(
                 icon: Icons.schedule_rounded,
                 text: course.duration,
               ),
+
               _HeaderChip(
                 icon: Icons.event_seat_outlined,
                 text: '${course.seatsLeft} seats',
@@ -331,6 +576,10 @@ class _CourseHeader extends StatelessWidget {
     );
   }
 }
+
+// ==================================================================
+// HEADER CHIP
+// ==================================================================
 
 class _HeaderChip extends StatelessWidget {
   final IconData icon;
@@ -363,7 +612,9 @@ class _HeaderChip extends StatelessWidget {
             size: 15,
             color: Colors.white,
           ),
+
           const SizedBox(width: 5),
+
           Text(
             text,
             style: const TextStyle(
@@ -377,6 +628,10 @@ class _HeaderChip extends StatelessWidget {
     );
   }
 }
+
+// ==================================================================
+// BATCH CARD
+// ==================================================================
 
 class _BatchCard extends StatelessWidget {
   final _BatchOption option;
@@ -401,7 +656,8 @@ class _BatchCard extends StatelessWidget {
     ).format(batch.startDate!);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius:
+      BorderRadius.circular(16),
       onTap: onTap,
       child: AnimatedContainer(
         duration:
@@ -482,7 +738,8 @@ class _BatchCard extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   _InfoRow(
-                    icon: Icons.calendar_today_outlined,
+                    icon:
+                    Icons.calendar_today_outlined,
                     text:
                     '${batch.classDay} • ${batch.classTime}',
                   ),
@@ -490,7 +747,8 @@ class _BatchCard extends StatelessWidget {
                   const SizedBox(height: 7),
 
                   _InfoRow(
-                    icon: Icons.meeting_room_outlined,
+                    icon:
+                    Icons.meeting_room_outlined,
                     text:
                     '${batch.room} • Starts $startDate',
                   ),
@@ -498,7 +756,8 @@ class _BatchCard extends StatelessWidget {
                   const SizedBox(height: 7),
 
                   _InfoRow(
-                    icon: Icons.event_seat_outlined,
+                    icon:
+                    Icons.event_seat_outlined,
                     text:
                     '${batch.seatsLeft} seats available',
                   ),
@@ -511,6 +770,10 @@ class _BatchCard extends StatelessWidget {
     );
   }
 }
+
+// ==================================================================
+// INFO ROW
+// ==================================================================
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;
@@ -530,7 +793,9 @@ class _InfoRow extends StatelessWidget {
           size: 15,
           color: AppColors.textSecondary,
         ),
+
         const SizedBox(width: 7),
+
         Expanded(
           child: Text(
             text,
@@ -545,6 +810,10 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+// ==================================================================
+// BATCH OPTION
+// ==================================================================
+
 class _BatchOption {
   final BatchModel batch;
   final CampusModel campus;
@@ -554,6 +823,10 @@ class _BatchOption {
     required this.campus,
   });
 }
+
+// ==================================================================
+// EMPTY CAMPUS CARD
+// ==================================================================
 
 class _EmptyCampusCard extends StatelessWidget {
   const _EmptyCampusCard();
@@ -565,7 +838,8 @@ class _EmptyCampusCard extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+        BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.border,
         ),
@@ -577,14 +851,18 @@ class _EmptyCampusCard extends StatelessWidget {
             size: 42,
             color: AppColors.textLight,
           ),
+
           SizedBox(height: 12),
+
           Text(
             'No available batches',
             style: TextStyle(
               fontWeight: FontWeight.w700,
             ),
           ),
+
           SizedBox(height: 5),
+
           Text(
             'There are currently no open batches for this course.',
             textAlign: TextAlign.center,
@@ -598,6 +876,10 @@ class _EmptyCampusCard extends StatelessWidget {
     );
   }
 }
+
+// ==================================================================
+// ERROR CARD
+// ==================================================================
 
 class _ErrorCard extends StatelessWidget {
   final VoidCallback onRetry;
@@ -613,7 +895,8 @@ class _ErrorCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+        BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -622,46 +905,20 @@ class _ErrorCard extends StatelessWidget {
             color: AppColors.error,
             size: 36,
           ),
+
           const SizedBox(height: 10),
+
           const Text(
             'Unable to load campuses.',
           ),
+
           const SizedBox(height: 12),
+
           OutlinedButton(
             onPressed: onRetry,
             child: const Text('Retry'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// Temporary navigation target.
-// Actual application form comes in the next step.
-class _ApplicationPlaceholderScreen
-    extends StatelessWidget {
-  final CourseModel course;
-  final String batchId;
-
-  const _ApplicationPlaceholderScreen({
-    required this.course,
-    required this.batchId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Application'),
-      ),
-      body: Center(
-        child: Text(
-          'Application form\n\n'
-              'Course: ${course.name}\n'
-              'Batch: $batchId',
-          textAlign: TextAlign.center,
-        ),
       ),
     );
   }

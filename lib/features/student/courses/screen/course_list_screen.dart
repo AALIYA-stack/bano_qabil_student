@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../models/course_model.dart';
 import '../../../../services/course_service.dart';
+import '../screen/course_detail_screen.dart';
 import '../widgets/course_card.dart';
 
 class CourseListScreen extends StatefulWidget {
@@ -64,10 +65,24 @@ class _CourseListScreenState
     }).toList();
   }
 
+  void _openCourseDetails(
+      CourseModel course,
+      ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CourseDetailScreen(
+          course: course,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+
       appBar: AppBar(
         title: const Text(
           'Courses',
@@ -77,6 +92,7 @@ class _CourseListScreenState
         ),
         backgroundColor: AppColors.background,
       ),
+
       body: FutureBuilder<List<CourseModel>>(
         future: _coursesFuture,
         builder: (context, snapshot) {
@@ -93,8 +109,7 @@ class _CourseListScreenState
             );
           }
 
-          final courses =
-          _filterCourses(
+          final courses = _filterCourses(
             snapshot.data ?? [],
           );
 
@@ -120,7 +135,8 @@ class _CourseListScreenState
                     InputDecoration(
                       hintText:
                       'Search courses...',
-                      prefixIcon: const Icon(
+                      prefixIcon:
+                      const Icon(
                         Icons.search_rounded,
                       ),
                       suffixIcon:
@@ -132,7 +148,8 @@ class _CourseListScreenState
                             '';
                           });
                         },
-                        icon: const Icon(
+                        icon:
+                        const Icon(
                           Icons.clear,
                         ),
                       )
@@ -149,7 +166,9 @@ class _CourseListScreenState
                     children: [
                       SizedBox(
                         height:
-                        MediaQuery.of(context)
+                        MediaQuery.of(
+                          context,
+                        )
                             .size
                             .height *
                             .3,
@@ -171,7 +190,8 @@ class _CourseListScreenState
                       20,
                       30,
                     ),
-                    itemCount: courses.length,
+                    itemCount:
+                    courses.length,
                     separatorBuilder:
                         (_, __) =>
                     const SizedBox(
@@ -186,7 +206,9 @@ class _CourseListScreenState
                         course: course,
                         index: index,
                         onTap: () {
-                          // Detail screen next
+                          _openCourseDetails(
+                            course,
+                          );
                         },
                       );
                     },
@@ -212,7 +234,8 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding:
+        const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment:
           MainAxisAlignment.center,
@@ -222,7 +245,9 @@ class _ErrorView extends StatelessWidget {
               size: 54,
               color: AppColors.textLight,
             ),
+
             const SizedBox(height: 16),
+
             const Text(
               'Unable to load courses',
               style: TextStyle(
@@ -230,15 +255,21 @@ class _ErrorView extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+
             const SizedBox(height: 8),
+
             const Text(
               'Please check your connection and try again.',
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 20),
+
             ElevatedButton(
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: const Text(
+                'Retry',
+              ),
             ),
           ],
         ),

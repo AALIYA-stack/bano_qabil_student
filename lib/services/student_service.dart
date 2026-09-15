@@ -36,12 +36,10 @@ class StudentHomeService {
   final BatchService _batchService =
       BatchService.instance;
 
-  final AssignmentService
-  _assignmentService =
+  final AssignmentService _assignmentService =
       AssignmentService.instance;
 
-  final SubmissionService
-  _submissionService =
+  final SubmissionService _submissionService =
       SubmissionService.instance;
 
   final ProgressService _progressService =
@@ -50,12 +48,14 @@ class StudentHomeService {
   final CareerService _careerService =
       CareerService.instance;
 
-  final NotificationService
-  _notificationService =
+  final NotificationService _notificationService =
       NotificationService.instance;
 
-  Future<StudentDashboardModel>
-  getDashboard() async {
+  // ============================================================
+  // GET STUDENT DASHBOARD
+  // ============================================================
+
+  Future<StudentDashboardModel> getDashboard() async {
     final firebaseUser =
         _auth.currentUser;
 
@@ -65,9 +65,9 @@ class StudentHomeService {
       );
     }
 
-    // -----------------------------
-    // CURRENT USER PROFILE
-    // -----------------------------
+    // ==========================================================
+    // USER
+    // ==========================================================
 
     final UserModel? user =
     await _authService
@@ -75,53 +75,81 @@ class StudentHomeService {
 
     if (user == null) {
       throw Exception(
-        'Student profile was not found.',
+        'Student profile was not found in Firestore.',
       );
     }
 
-    // -----------------------------
+    // ==========================================================
     // COURSE
-    // -----------------------------
+    // ==========================================================
 
     CourseModel? course;
 
-    final courseId = user.courseId;
+    final String? courseId =
+        user.courseId;
 
     if (courseId != null &&
         courseId.trim().isNotEmpty) {
-      course =
-      await _getCourseById(
-        courseId,
-      );
+      try {
+        course =
+        await _getCourseById(
+          courseId.trim(),
+        );
+      } catch (_) {
+        course = null;
+      }
     }
 
-    // -----------------------------
+    // ==========================================================
     // BATCH
-    // -----------------------------
+    // ==========================================================
 
     BatchModel? batch;
 
-    final batchId = user.batchId;
+    final String? batchId =
+        user.batchId;
 
     if (batchId != null &&
         batchId.trim().isNotEmpty) {
-      batch =
-      await _batchService
-          .getBatchById(
-        batchId,
-      );
+      try {
+        batch =
+        await _batchService
+            .getBatchById(
+          batchId.trim(),
+        );
+      } catch (_) {
+        batch = null;
+      }
     }
 
-    // -----------------------------
+    // ==========================================================
+    // DEFAULT CAREER
+    // ==========================================================
+
+    final defaultCareerProgress =
+    CareerProgressModel(
+      studentId:
+      firebaseUser.uid,
+      cvReady: false,
+      githubReady: false,
+      projectsCompleted: 0,
+      mockInterviewDone: false,
+      jobsApplied: 0,
+      updatedAt: null,
+    );
+
+    // ==========================================================
     // DEFAULT PROGRESS
-    // -----------------------------
+    // ==========================================================
 
     ProgressModel progress =
-    const ProgressModel(
+    ProgressModel(
       completedModules: 0,
       totalModules: 0,
       attendancePercentage: 0,
       assignmentAverage: 0,
+      careerProgress:
+      defaultCareerProgress,
     );
 
     double attendancePercentage = 0;
@@ -132,37 +160,52 @@ class StudentHomeService {
     int lateAssignments = 0;
     int markedAssignments = 0;
 
-    // -----------------------------
-    // BATCH DATA
-    // -----------------------------
+    // ==========================================================
+    // COURSE + BATCH DATA
+    // ==========================================================
 
     if (batchId != null &&
-        batchId.trim().isNotEmpty) {
+        batchId.trim().isNotEmpty &&
+        courseId != null &&
+        courseId.trim().isNotEmpty) {
+      // --------------------------------------------------------
+      // PROGRESS
+      // --------------------------------------------------------
+
       try {
         progress =
         await _progressService
             .getMyProgress(
-          batchId: batchId,
+          batchId:
+          batchId.trim(),
+          courseId:
+          courseId.trim(),
         );
 
         attendancePercentage =
             progress.attendancePercentage;
       } catch (_) {
         progress =
-        const ProgressModel(
-          completedModules: 0,
-          totalModules: 0,
-          attendancePercentage: 0,
-          assignmentAverage: 0,
-        );
+            ProgressModel(
+              completedModules: 0,
+              totalModules: 0,
+              attendancePercentage: 0,
+              assignmentAverage: 0,
+              careerProgress:
+              defaultCareerProgress,
+            );
 
         attendancePercentage = 0;
       }
 
+      // --------------------------------------------------------
+      // ASSIGNMENTS
+      // --------------------------------------------------------
+
       try {
         final assignmentData =
         await _loadAssignmentData(
-          batchId,
+          batchId.trim(),
         );
 
         totalAssignments =
@@ -188,9 +231,9 @@ class StudentHomeService {
       }
     }
 
-    // -----------------------------
+    // ==========================================================
     // CAREER
-    // -----------------------------
+    // ==========================================================
 
     CareerProgressModel?
     careerProgress;
@@ -203,9 +246,17 @@ class StudentHomeService {
       careerProgress = null;
     }
 
-    // -----------------------------
+    if (careerProgress != null) {
+      progress =
+          progress.copyWith(
+            careerProgress:
+            careerProgress,
+          );
+    }
+
+    // ==========================================================
     // NOTIFICATIONS
-    // -----------------------------
+    // ==========================================================
 
     int unreadNotifications = 0;
 
@@ -217,9 +268,9 @@ class StudentHomeService {
       unreadNotifications = 0;
     }
 
-    // -----------------------------
-    // FINAL DASHBOARD
-    // -----------------------------
+    // ==========================================================
+    // RETURN
+    // ==========================================================
 
     return StudentDashboardModel(
       user: user,
@@ -245,23 +296,24 @@ class StudentHomeService {
     );
   }
 
-  // ==================================================
-  // COURSE
-  // ==================================================
+  // ============================================================
+  // GET COURSE
+  // ============================================================
 
   Future<CourseModel?> _getCourseById(
       String courseId,
       ) async {
-    if (courseId.trim().isEmpty) {
+    final id = courseId.trim();
+
+    if (id.isEmpty) {
       return null;
     }
 
-    final doc =
-    await _firestore
+    final doc = await _firestore
         .collection(
       CollectionNames.courses,
     )
-        .doc(courseId)
+        .doc(id)
         .get();
 
     if (!doc.exists) {
@@ -273,32 +325,53 @@ class StudentHomeService {
     );
   }
 
-  // ==================================================
-  // ASSIGNMENT DATA
-  // ==================================================
+  // ============================================================
+  // LOAD ASSIGNMENT DATA
+  // ============================================================
 
   Future<_AssignmentDashboardData>
   _loadAssignmentData(
       String batchId,
       ) async {
+    final id = batchId.trim();
+
+    if (id.isEmpty) {
+      return const _AssignmentDashboardData(
+        total: 0,
+        pending: 0,
+        submitted: 0,
+        late: 0,
+        marked: 0,
+      );
+    }
+
+    // ----------------------------------------------------------
+    // ASSIGNMENTS
+    // ----------------------------------------------------------
+
     final assignments =
     await _assignmentService
         .getAssignmentsForBatch(
-      batchId,
+      id,
     );
+
+    // ----------------------------------------------------------
+    // SUBMISSIONS
+    // ----------------------------------------------------------
 
     final submissions =
     await _submissionService
         .getMySubmissions();
 
     final batchSubmissions =
-    submissions
-        .where(
+    submissions.where(
           (submission) =>
-      submission.batchId ==
-          batchId,
-    )
-        .toList();
+      submission.batchId == id,
+    ).toList();
+
+    // ----------------------------------------------------------
+    // ASSIGNMENT ID -> SUBMISSION
+    // ----------------------------------------------------------
 
     final Map<String, SubmissionModel>
     submissionByAssignment = {};
@@ -315,12 +388,17 @@ class StudentHomeService {
     int late = 0;
     int marked = 0;
 
+    // ----------------------------------------------------------
+    // CHECK ASSIGNMENTS
+    // ----------------------------------------------------------
+
     for (final assignment
     in assignments) {
       final submission =
       submissionByAssignment[
       assignment.id];
 
+      // No submission
       if (submission == null) {
         pending++;
         continue;
@@ -349,9 +427,9 @@ class StudentHomeService {
   }
 }
 
-// ======================================================
-// PRIVATE ASSIGNMENT DATA
-// ======================================================
+// ============================================================
+// PRIVATE DATA
+// ============================================================
 
 class _AssignmentDashboardData {
   final int total;

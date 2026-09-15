@@ -33,36 +33,55 @@ class AttendanceModel {
       id: doc.id,
 
       studentId:
-      data['studentId']?.toString() ?? '',
+      data['studentId']?.toString().trim() ?? '',
 
       batchId:
-      data['batchId']?.toString() ?? '',
+      data['batchId']?.toString().trim() ?? '',
 
-      date: _parseDate(
-        data['date'],
-      ),
+      date: _parseDate(data['date']),
 
       status:
-      data['status']?.toString().toLowerCase() ??
-          'absent',
+      _normalizeStatus(data['status']),
 
       markedBy:
-      data['markedBy']?.toString() ?? '',
+      data['markedBy']?.toString().trim() ?? '',
 
       createdAt:
-      _parseNullableDate(
-        data['createdAt'],
-      ),
+      _parseNullableDate(data['createdAt']),
     );
+  }
+
+  // ============================================================
+  // STATUS NORMALIZER
+  // ============================================================
+
+  static String _normalizeStatus(dynamic value) {
+    final String status =
+        value?.toString().trim().toLowerCase() ?? '';
+
+    switch (status) {
+      case 'present':
+        return 'present';
+
+      case 'absent':
+        return 'absent';
+
+      case 'late':
+        return 'late';
+
+      case 'leave':
+        return 'leave';
+
+      default:
+        return 'unknown';
+    }
   }
 
   // ============================================================
   // DATE PARSER
   // ============================================================
 
-  static DateTime _parseDate(
-      dynamic value,
-      ) {
+  static DateTime _parseDate(dynamic value) {
     if (value is Timestamp) {
       return value.toDate();
     }
@@ -72,7 +91,7 @@ class AttendanceModel {
     }
 
     if (value is String) {
-      final parsed =
+      final DateTime? parsed =
       DateTime.tryParse(value);
 
       if (parsed != null) {
@@ -80,8 +99,14 @@ class AttendanceModel {
       }
     }
 
-    return DateTime.now();
+    // Missing date ko handle karega
+    // taake app crash na ho.
+    return DateTime.fromMillisecondsSinceEpoch(0);
   }
+
+  // ============================================================
+  // NULLABLE DATE PARSER
+  // ============================================================
 
   static DateTime? _parseNullableDate(
       dynamic value,
@@ -123,17 +148,41 @@ class AttendanceModel {
   // ============================================================
 
   bool get isPresent =>
-      status.toLowerCase() == 'present';
+      status == 'present';
 
   bool get isAbsent =>
-      status.toLowerCase() == 'absent';
+      status == 'absent';
 
   bool get isLeave =>
-      status.toLowerCase() == 'leave';
+      status == 'leave';
 
   bool get isLate =>
-      status.toLowerCase() == 'late';
+      status == 'late';
 
+  // Present + Late = Attended
   bool get isAttended =>
       isPresent || isLate;
+
+  // ============================================================
+  // DISPLAY HELPERS
+  // ============================================================
+
+  String get statusLabel {
+    switch (status) {
+      case 'present':
+        return 'Present';
+
+      case 'absent':
+        return 'Absent';
+
+      case 'late':
+        return 'Late';
+
+      case 'leave':
+        return 'Leave';
+
+      default:
+        return 'Unknown';
+    }
+  }
 }

@@ -31,85 +31,28 @@ class SubmissionModel {
     required this.markedBy,
   });
 
-  // ============================================================
-  // FROM FIRESTORE
-  // ============================================================
-
   factory SubmissionModel.fromFirestore(
       DocumentSnapshot<Map<String, dynamic>> doc,
       ) {
     final Map<String, dynamic> data =
-        doc.data() ?? {};
+        doc.data() ?? <String, dynamic>{};
 
     return SubmissionModel(
       id: doc.id,
-
-      assignmentId:
-      data['assignmentId']?.toString() ?? '',
-
-      studentId:
-      data['studentId']?.toString() ?? '',
-
-      batchId:
-      data['batchId']?.toString() ?? '',
-
-      answerText:
-      data['answerText']?.toString() ?? '',
-
-      fileUrl:
-      data['fileUrl']?.toString(),
-
-      fileName:
-      data['fileName']?.toString(),
-
-      status:
-      data['status']
-          ?.toString()
-          .toLowerCase() ??
-          'submitted',
-
-      submittedAt:
-      _parseDate(data['submittedAt']),
-
-      marks:
-      (data['marks'] as num?)?.toInt(),
-
-      feedback:
-      data['feedback']?.toString(),
-
-      markedAt:
-      _parseDate(data['markedAt']),
-
-      markedBy:
-      data['markedBy']?.toString(),
+      assignmentId: data['assignmentId']?.toString() ?? '',
+      studentId: data['studentId']?.toString() ?? '',
+      batchId: data['batchId']?.toString() ?? '',
+      answerText: data['answerText']?.toString() ?? '',
+      fileUrl: _nullableString(data['fileUrl']),
+      fileName: _nullableString(data['fileName']),
+      status: data['status']?.toString().toLowerCase() ?? 'submitted',
+      submittedAt: _parseDate(data['submittedAt']),
+      marks: _parseMarks(data['marks']),
+      feedback: _nullableString(data['feedback']),
+      markedAt: _parseDate(data['markedAt']),
+      markedBy: _nullableString(data['markedBy']),
     );
   }
-
-  // ============================================================
-  // DATE PARSER
-  // ============================================================
-
-  static DateTime? _parseDate(
-      dynamic value,
-      ) {
-    if (value is Timestamp) {
-      return value.toDate();
-    }
-
-    if (value is DateTime) {
-      return value;
-    }
-
-    if (value is String) {
-      return DateTime.tryParse(value);
-    }
-
-    return null;
-  }
-
-  // ============================================================
-  // TO FIRESTORE
-  // ============================================================
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -120,29 +63,17 @@ class SubmissionModel {
       'fileUrl': fileUrl,
       'fileName': fileName,
       'status': status,
-
       'submittedAt': submittedAt == null
           ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(
-        submittedAt!,
-      ),
-
+          : Timestamp.fromDate(submittedAt!),
       'marks': marks,
       'feedback': feedback,
-
       'markedAt': markedAt == null
           ? null
-          : Timestamp.fromDate(
-        markedAt!,
-      ),
-
+          : Timestamp.fromDate(markedAt!),
       'markedBy': markedBy,
     };
   }
-
-  // ============================================================
-  // STATUS HELPERS
-  // ============================================================
 
   bool get isSubmitted {
     return status == 'submitted' ||
@@ -160,5 +91,43 @@ class SubmissionModel {
 
   bool get isPending {
     return !isSubmitted;
+  }
+
+  static String? _nullableString(dynamic value) {
+    if (value == null) return null;
+
+    final String text = value.toString().trim();
+
+    if (text.isEmpty) return null;
+
+    return text;
+  }
+
+  static int? _parseMarks(dynamic value) {
+    if (value is num) {
+      return value.toInt();
+    }
+
+    if (value is String) {
+      return int.tryParse(value);
+    }
+
+    return null;
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    if (value is DateTime) {
+      return value;
+    }
+
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+
+    return null;
   }
 }

@@ -7,8 +7,11 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimensions.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
+import '../../../../core/constants/collection_names.dart';
 import '../../../../models/assignment_model.dart';
+import '../../../../models/submission_model.dart';
 import '../../../../services/assignment_service.dart';
+import '../../../../services/submission_service.dart';
 import 'assignment_detail_screen.dart';
 
 class AssignmentsScreen extends StatefulWidget {
@@ -29,10 +32,16 @@ class _AssignmentsScreenState
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  Future<List<AssignmentModel>>?
-  _assignmentsFuture;
+  bool _isLoading = true;
 
-  String _batchId = '';
+  String? _batchId;
+
+  String? _errorMessage;
+
+  List<AssignmentModel> _assignments = [];
+
+  final Map<String, SubmissionModel?>
+  _submissions = {};
 
   @override
   void initState() {
@@ -42,76 +51,165 @@ class _AssignmentsScreenState
   }
 
   // ============================================================
-  // LOAD STUDENT BATCH
+  // LOAD ASSIGNMENTS
   // ============================================================
 
   Future<void> _loadAssignments() async {
-    final User? user =
-        _auth.currentUser;
+    if (!mounted) return;
 
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _assignmentsFuture =
-              Future.value([]);
-        });
-      }
-
-      return;
-    }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
+      final User? user =
+          _auth.currentUser;
+
+      if (user == null) {
+        throw Exception(
+          'Please login first.',
+        );
+      }
+
       final DocumentSnapshot<
           Map<String, dynamic>> userDoc =
       await _firestore
-          .collection('users')
+          .collection(
+        CollectionNames.users,
+      )
           .doc(user.uid)
           .get();
 
       if (!userDoc.exists) {
-        if (mounted) {
-          setState(() {
-            _assignmentsFuture =
-                Future.value([]);
-          });
-        }
-
-        return;
+        throw Exception(
+          'Student profile not found.',
+        );
       }
 
       final Map<String, dynamic> data =
-          userDoc.data() ?? {};
+          userDoc.data() ??
+              <String, dynamic>{};
 
       final String batchId =
-          data['batchId']?.toString() ?? '';
+          data['batchId']?.toString().trim() ??
+              '';
 
-      if (mounted) {
-        setState(() {
-          _batchId = batchId;
-
-          _assignmentsFuture =
-              AssignmentService.instance
-                  .getAssignmentsForBatch(
-                batchId,
-              );
-        });
+      if (batchId.isEmpty) {
+        throw Exception(
+          'No batch is assigned to your account.',
+        );
       }
+
+      final List<AssignmentModel>
+      assignments =
+      await AssignmentService.instance
+          .getAssignmentsForBatch(
+        batchId,
+      );
+
+      // --------------------------------------------------------
+      // LOAD SUBMISSIONS
+      // --------------------------------------------------------
+
+      final Map<String, SubmissionModel?>
+      submissions = {};
+
+      for (final AssignmentModel assignment
+      in assignments) {
+        try {
+          submissions[assignment.id] =
+          await SubmissionService
+              .instance
+              .getMySubmission(
+            assignment.id,
+          );
+        } catch (_) {
+          submissions[assignment.id] =
+          null;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _batchId = batchId;
+        _assignments = assignments;
+        _submissions
+          ..clear()
+          ..addAll(submissions);
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _assignmentsFuture =
-              Future.error(e);
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e
+            .toString()
+            .replaceFirst(
+          'Exception: ',
+          '',
+        );
+      });
     }
   }
 
   // ============================================================
-  // REFRESH
+  // OPEN DETAIL
   // ============================================================
 
-  Future<void> _refresh() async {
-    await _loadAssignments();
+  Future<void> _openAssignment(
+      AssignmentModel assignment,
+      ) async {
+    final String? batchId =
+        _batchId;
+
+    if (batchId == null ||
+        batchId.isEmpty) {
+      _showMessage(
+        'Student batch is not available.',
+        isError: true,
+      );
+      return;
+    }
+
+    final dynamic result =
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            AssignmentDetailScreen(
+              assignment: assignment,
+              submission:
+              _submissions[assignment.id],
+              batchId: batchId,
+            ),
+      ),
+    );
+
+    if (result == true) {
+      await _loadAssignments();
+    }
+  }
+
+  // ============================================================
+  // MESSAGE
+  // ============================================================
+
+  void _showMessage(
+      String message, {
+        bool isError = false,
+      }) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError
+            ? AppColors.error
+            : AppColors.success,
+      ),
+    );
   }
 
   // ============================================================
@@ -119,117 +217,80 @@ class _AssignmentsScreenState
   // ============================================================
 
   @override
-  Widget build(
-      BuildContext context,
-      ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
       AppColors.background,
-
       appBar: AppBar(
         title: const Text(
           'Assignments',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed:
+            _isLoading
+                ? null
+                : _loadAssignments,
+            icon: const Icon(
+              Icons.refresh_rounded,
+            ),
+          ),
+        ],
       ),
+      body: _buildBody(),
+    );
+  }
 
-      body: FutureBuilder<
-          List<AssignmentModel>>(
-        future: _assignmentsFuture,
+  // ============================================================
+  // BODY
+  // ============================================================
 
-        builder: (
-            context,
-            snapshot,
-            ) {
-          // ------------------------------------------------------
-          // LOADING
-          // ------------------------------------------------------
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child:
+        CircularProgressIndicator(),
+      );
+    }
 
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
-            return const Center(
-              child:
-              CircularProgressIndicator(),
-            );
-          }
+    if (_errorMessage != null) {
+      return _buildError();
+    }
 
-          // ------------------------------------------------------
-          // ERROR
-          // ------------------------------------------------------
+    if (_assignments.isEmpty) {
+      return _buildEmpty();
+    }
 
-          if (snapshot.hasError) {
-            return _buildErrorState(
-              snapshot.error,
-            );
-          }
+    return RefreshIndicator(
+      onRefresh: _loadAssignments,
+      child: ListView.separated(
+        physics:
+        const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(
+          AppDimensions.paddingMedium,
+        ),
+        itemCount: _assignments.length,
+        separatorBuilder:
+            (_, __) =>
+        const SizedBox(height: 12),
+        itemBuilder:
+            (context, index) {
+          final AssignmentModel assignment =
+          _assignments[index];
 
-          final List<AssignmentModel>
-          assignments =
-              snapshot.data ?? [];
+          final SubmissionModel? submission =
+          _submissions[assignment.id];
 
-          // ------------------------------------------------------
-          // EMPTY
-          // ------------------------------------------------------
-
-          if (assignments.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                physics:
-                const AlwaysScrollableScrollPhysics(),
-                children: [
-                  SizedBox(
-                    height:
-                    MediaQuery.of(context)
-                        .size
-                        .height *
-                        0.25,
-                  ),
-                  _buildEmptyState(),
-                ],
-              ),
-            );
-          }
-
-          // ------------------------------------------------------
-          // LIST
-          // ------------------------------------------------------
-
-          return RefreshIndicator(
-            onRefresh: _refresh,
-
-            child: ListView.builder(
-              physics:
-              const AlwaysScrollableScrollPhysics(),
-
-              padding:
-              const EdgeInsets.all(
-                AppDimensions.paddingMedium,
-              ),
-
-              itemCount:
-              assignments.length,
-
-              itemBuilder:
-                  (context, index) {
-                final AssignmentModel
-                assignment =
-                assignments[index];
-
-                return FadeSlideAnimation(
-                  delay: Duration(
-                    milliseconds:
-                    index * 60,
-                  ),
-                  child:
-                  _buildAssignmentCard(
-                    context,
-                    assignment,
-                  ),
-                );
-              },
+          return FadeSlideAnimation(
+            delay: Duration(
+              milliseconds:
+              60 * index,
+            ),
+            child:
+            _buildAssignmentCard(
+              assignment,
+              submission,
             ),
           );
         },
@@ -242,223 +303,245 @@ class _AssignmentsScreenState
   // ============================================================
 
   Widget _buildAssignmentCard(
-      BuildContext context,
       AssignmentModel assignment,
+      SubmissionModel? submission,
       ) {
-    final bool pastDue =
-        assignment.isPastDue;
+    final bool submitted =
+        submission != null;
 
-    return Card(
-      elevation: 0,
+    final bool marked =
+        submission?.isMarked ?? false;
 
-      margin:
-      const EdgeInsets.only(
-        bottom: 12,
+    final bool late =
+        submission?.isLate ?? false;
+
+    return InkWell(
+      borderRadius:
+      BorderRadius.circular(
+        AppDimensions.radiusLarge,
       ),
-
-      child: InkWell(
-        borderRadius:
-        BorderRadius.circular(
-          AppDimensions.radiusLarge,
-        ),
-
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  AssignmentDetailScreen(
-                    assignment: assignment,
-                    submission: null,
-                    batchId: _batchId,
-                  ),
-            ),
-          );
-
-          if (mounted) {
-            _loadAssignments();
-          }
-        },
-
-        child: Padding(
-          padding:
-          const EdgeInsets.all(
-            AppDimensions.paddingMedium,
+      onTap: () =>
+          _openAssignment(
+            assignment,
           ),
-
-          child: Row(
-            children: [
-              // ------------------------------------------------
-              // ICON
-              // ------------------------------------------------
-
-              Container(
-                width: 48,
-                height: 48,
-
-                decoration:
-                BoxDecoration(
-                  color:
-                  AppColors.accentLight,
-                  borderRadius:
-                  BorderRadius.circular(
-                    14,
+      child: Container(
+        padding:
+        const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius:
+          BorderRadius.circular(
+            AppDimensions.radiusLarge,
+          ),
+          border: Border.all(
+            color: AppColors.border,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 45,
+                  height: 45,
+                  decoration:
+                  BoxDecoration(
+                    color:
+                    AppColors.primary
+                        .withValues(
+                      alpha: 0.10,
+                    ),
+                    borderRadius:
+                    BorderRadius.circular(
+                      12,
+                    ),
+                  ),
+                  child: Icon(
+                    assignment.isQuiz
+                        ? Icons
+                        .quiz_outlined
+                        : Icons
+                        .assignment_outlined,
+                    color:
+                    AppColors.primary,
                   ),
                 ),
 
-                child: Icon(
-                  assignment.isQuiz
-                      ? Icons.quiz_outlined
-                      : Icons
-                      .assignment_outlined,
+                const SizedBox(
+                  width: 12,
+                ),
 
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                    CrossAxisAlignment
+                        .start,
+                    children: [
+                      Text(
+                        assignment.title,
+                        maxLines: 2,
+                        overflow:
+                        TextOverflow.ellipsis,
+                        style: AppTextStyles
+                            .heading3,
+                      ),
+
+                      const SizedBox(
+                        height: 6,
+                      ),
+
+                      Text(
+                        assignment.isQuiz
+                            ? 'Quiz'
+                            : 'Assignment',
+                        style: AppTextStyles
+                            .bodySmall
+                            .copyWith(
+                          color:
+                          AppColors
+                              .primary,
+                          fontWeight:
+                          FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Icon(
+                  Icons
+                      .arrow_forward_ios_rounded,
+                  size: 16,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                const Icon(
+                  Icons
+                      .stars_outlined,
+                  size: 17,
                   color:
                   AppColors.primary,
                 ),
-              ),
-
-              const SizedBox(
-                width: 14,
-              ),
-
-              // ------------------------------------------------
-              // DETAILS
-              // ------------------------------------------------
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
-
-                  children: [
-                    Text(
-                      assignment.title
-                          .isEmpty
-                          ? 'Untitled Assignment'
-                          : assignment.title,
-
-                      maxLines: 2,
-
-                      overflow:
-                      TextOverflow.ellipsis,
-
-                      style:
-                      const TextStyle(
-                        fontSize: 15,
-                        fontWeight:
-                        FontWeight.w800,
-                      ),
-                    ),
-
-                    const SizedBox(
-                      height: 6,
-                    ),
-
-                    Text(
-                      assignment.dueDate ==
-                          null
-                          ? 'No due date'
-                          : 'Due ${DateFormat('dd MMM yyyy').format(assignment.dueDate!)}',
-
-                      style:
-                      TextStyle(
-                        fontSize: 11,
-                        color: pastDue
-                            ? AppColors.error
-                            : AppColors
-                            .textSecondary,
-                        fontWeight:
-                        pastDue
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                      ),
-                    ),
-
-                    const SizedBox(
-                      height: 4,
-                    ),
-
-                    Text(
-                      '${assignment.totalMarks} marks',
-
-                      style:
-                      const TextStyle(
-                        fontSize: 11,
-                        color:
-                        AppColors
-                            .textSecondary,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 6),
+                Text(
+                  '${assignment.totalMarks} marks',
+                  style: AppTextStyles
+                      .bodySmall,
                 ),
-              ),
 
-              const SizedBox(
-                width: 8,
-              ),
+                const SizedBox(width: 18),
 
-              // ------------------------------------------------
-              // ARROW
-              // ------------------------------------------------
+                const Icon(
+                  Icons
+                      .schedule_outlined,
+                  size: 17,
+                  color:
+                  AppColors.primary,
+                ),
+                const SizedBox(width: 6),
 
-              const Icon(
-                Icons
-                    .arrow_forward_ios_rounded,
-                size: 15,
-                color:
-                AppColors.textSecondary,
-              ),
-            ],
-          ),
+                Expanded(
+                  child: Text(
+                    assignment.dueDate ==
+                        null
+                        ? 'No due date'
+                        : DateFormat(
+                      'dd MMM yyyy',
+                    ).format(
+                      assignment.dueDate!,
+                    ),
+                    overflow:
+                    TextOverflow.ellipsis,
+                    style: AppTextStyles
+                        .bodySmall,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            _buildStatus(
+              submitted: submitted,
+              marked: marked,
+              late: late,
+            ),
+          ],
         ),
       ),
     );
   }
 
   // ============================================================
-  // EMPTY STATE
+  // STATUS
   // ============================================================
 
-  Widget _buildEmptyState() {
-    return Padding(
+  Widget _buildStatus({
+    required bool submitted,
+    required bool marked,
+    required bool late,
+  }) {
+    String text;
+    Color color;
+    IconData icon;
+
+    if (marked) {
+      text = 'Marked';
+      color = AppColors.success;
+      icon = Icons.verified_rounded;
+    } else if (late) {
+      text = 'Submitted Late';
+      color = AppColors.error;
+      icon = Icons.warning_rounded;
+    } else if (submitted) {
+      text = 'Submitted';
+      color = AppColors.success;
+      icon = Icons.check_circle_rounded;
+    } else {
+      text = 'Not Submitted';
+      color = AppColors.primary;
+      icon = Icons.pending_actions_rounded;
+    }
+
+    return Container(
+      width: double.infinity,
       padding:
-      const EdgeInsets.all(30),
-
-      child: Column(
-        mainAxisAlignment:
-        MainAxisAlignment.center,
-
+      const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 9,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(
+          alpha: 0.08,
+        ),
+        borderRadius:
+        BorderRadius.circular(10),
+      ),
+      child: Row(
         children: [
-          const Icon(
-            Icons.assignment_outlined,
-            size: 64,
-            color:
-            AppColors.textSecondary,
+          Icon(
+            icon,
+            size: 18,
+            color: color,
           ),
-
-          const SizedBox(
-            height: 16,
-          ),
-
+          const SizedBox(width: 7),
           Text(
-            'No assignments yet',
+            text,
             style:
-            AppTextStyles.heading2,
-            textAlign:
-            TextAlign.center,
-          ),
-
-          const SizedBox(
-            height: 8,
-          ),
-
-          const Text(
-            'Assignments for your batch will appear here.',
-            textAlign:
-            TextAlign.center,
-            style: TextStyle(
-              color:
-              AppColors.textSecondary,
+            AppTextStyles.bodySmall
+                .copyWith(
+              color: color,
+              fontWeight:
+              FontWeight.w700,
             ),
           ),
         ],
@@ -467,75 +550,89 @@ class _AssignmentsScreenState
   }
 
   // ============================================================
-  // ERROR STATE
+  // EMPTY
   // ============================================================
 
-  Widget _buildErrorState(
-      Object? error,
-      ) {
+  Widget _buildEmpty() {
+    return RefreshIndicator(
+      onRefresh: _loadAssignments,
+      child: ListView(
+        physics:
+        const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height:
+            MediaQuery.of(context)
+                .size
+                .height *
+                0.30,
+          ),
+          const Icon(
+            Icons.assignment_outlined,
+            size: 70,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 16),
+          const Center(
+            child: Text(
+              'No assignments yet',
+              style:
+              AppTextStyles.heading2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Center(
+            child: Text(
+              'Your instructor has not added any assignments for your batch.',
+              textAlign:
+              TextAlign.center,
+              style:
+              AppTextStyles.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // ERROR
+  // ============================================================
+
+  Widget _buildError() {
     return Center(
       child: Padding(
         padding:
-        const EdgeInsets.all(30),
-
+        const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment:
-          MainAxisAlignment.center,
-
+          mainAxisSize:
+          MainAxisSize.min,
           children: [
             const Icon(
               Icons.error_outline_rounded,
               size: 60,
-              color:
-              AppColors.error,
+              color: AppColors.error,
             ),
-
-            const SizedBox(
-              height: 16,
-            ),
-
+            const SizedBox(height: 16),
             Text(
-              'Unable to load assignments',
+              _errorMessage ??
+                  'Something went wrong.',
+              textAlign:
+              TextAlign.center,
               style:
-              AppTextStyles.heading2,
-              textAlign:
-              TextAlign.center,
+              AppTextStyles.bodyMedium,
             ),
-
-            const SizedBox(
-              height: 8,
-            ),
-
-            const Text(
-              'Please check your internet connection and try again.',
-              textAlign:
-              TextAlign.center,
-              style: TextStyle(
-                color:
-                AppColors.textSecondary,
+            const SizedBox(height: 18),
+            ElevatedButton.icon(
+              onPressed:
+              _loadAssignments,
+              icon: const Icon(
+                Icons.refresh_rounded,
+              ),
+              label: const Text(
+                'Try Again',
               ),
             ),
-
-            const SizedBox(
-              height: 12,
-            ),
-
-            if (error != null)
-              Text(
-                error.toString(),
-                textAlign:
-                TextAlign.center,
-                maxLines: 3,
-                overflow:
-                TextOverflow.ellipsis,
-                style:
-                const TextStyle(
-                  fontSize: 10,
-                  color:
-                  AppColors
-                      .textSecondary,
-                ),
-              ),
           ],
         ),
       ),
