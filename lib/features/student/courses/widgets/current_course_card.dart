@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../../../app/theme/app_colors.dart';
-import '../../../../../../../core/animations/animated_progress.dart';
 
 class CurrentCourseCard extends StatelessWidget {
   final String courseName;
@@ -19,6 +18,26 @@ class CurrentCourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ============================================================
+    // SAFE PROGRESS
+    // ============================================================
+    //
+    // StudentHomeService / ProgressModel percentage can be:
+    // 66.67  -> percentage format
+    //
+    // If any other screen sends:
+    // 0.6667 -> fraction format
+    //
+    // This handles both safely.
+    // ============================================================
+
+    final double safePercentage = progress > 1
+        ? progress.clamp(0, 100).toDouble()
+        : (progress * 100).clamp(0, 100).toDouble();
+
+    final double progressValue =
+    (safePercentage / 100).clamp(0, 1).toDouble();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -35,6 +54,10 @@ class CurrentCourseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ========================================================
+          // TOP ROW
+          // ========================================================
+
           Row(
             children: [
               Container(
@@ -75,6 +98,10 @@ class CurrentCourseCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          // ========================================================
+          // COURSE LABEL
+          // ========================================================
+
           const Text(
             'Current Course',
             style: TextStyle(
@@ -84,6 +111,10 @@ class CurrentCourseCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 5),
+
+          // ========================================================
+          // COURSE NAME
+          // ========================================================
 
           Text(
             courseName,
@@ -95,6 +126,10 @@ class CurrentCourseCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 5),
+
+          // ========================================================
+          // CAMPUS
+          // ========================================================
 
           Row(
             children: [
@@ -116,9 +151,12 @@ class CurrentCourseCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          // ========================================================
+          // COURSE PROGRESS LABEL
+          // ========================================================
+
           Row(
-            mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Course Progress',
@@ -128,7 +166,7 @@ class CurrentCourseCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${(progress * 100).round()}%',
+                '${safePercentage.toStringAsFixed(2)}%',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -139,15 +177,20 @@ class CurrentCourseCard extends StatelessWidget {
 
           const SizedBox(height: 8),
 
+          // ========================================================
+          // PROGRESS BAR
+          // ========================================================
+
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: TweenAnimationBuilder<double>(
-              tween: Tween(
+              tween: Tween<double>(
                 begin: 0,
-                end: progress,
+                end: progressValue,
               ),
-              duration:
-              const Duration(milliseconds: 900),
+              duration: const Duration(
+                milliseconds: 900,
+              ),
               curve: Curves.easeOutCubic,
               builder: (
                   context,
@@ -155,7 +198,7 @@ class CurrentCourseCard extends StatelessWidget {
                   child,
                   ) {
                 return LinearProgressIndicator(
-                  value: value,
+                  value: value.clamp(0, 1),
                   minHeight: 7,
                   backgroundColor:
                   Colors.white.withValues(alpha: 0.2),
@@ -170,6 +213,10 @@ class CurrentCourseCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
+          // ========================================================
+          // VIEW COURSE BUTTON
+          // ========================================================
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -178,11 +225,11 @@ class CurrentCourseCard extends StatelessWidget {
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.primary,
                 elevation: 0,
-                padding:
-                const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                  BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text(

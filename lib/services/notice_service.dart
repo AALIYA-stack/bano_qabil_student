@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/constants/collection_names.dart';
 import '../models/notice_model.dart';
@@ -7,26 +6,14 @@ import '../models/notice_model.dart';
 class NoticeService {
   NoticeService._();
 
-  static final NoticeService instance =
-  NoticeService._();
+  static final NoticeService instance = NoticeService._();
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  final FirebaseAuth _auth =
-      FirebaseAuth.instance;
-
-  String get _uid {
-    final user = _auth.currentUser;
-
-    if (user == null) {
-      throw Exception(
-        'User is not logged in.',
-      );
-    }
-
-    return user.uid;
-  }
+  // ============================================================
+  // GET MY NOTICES
+  // ============================================================
 
   Future<List<NoticeModel>> getMyNotices({
     String? courseId,
@@ -34,41 +21,55 @@ class NoticeService {
     String? campusId,
   }) async {
     final snapshot = await _firestore
-        .collection(
-      CollectionNames.notices,
-    )
+        .collection(CollectionNames.notices)
         .where(
       'isActive',
       isEqualTo: true,
     )
         .get();
 
+    final String normalizedCourseId =
+        courseId?.trim().toLowerCase() ?? '';
+
+    final String normalizedBatchId =
+        batchId?.trim().toLowerCase() ?? '';
+
+    final String normalizedCampusId =
+        campusId?.trim().toLowerCase() ?? '';
+
     final notices = snapshot.docs
         .map(
-          (doc) =>
-          NoticeModel.fromFirestore(doc),
+          (doc) => NoticeModel.fromFirestore(doc),
     )
         .where((notice) {
-      final courseMatch =
-          notice.courseId == null ||
-              notice.courseId!.isEmpty ||
-              notice.courseId == courseId;
+      final String noticeCourseId =
+          notice.courseId?.trim().toLowerCase() ?? '';
 
-      final batchMatch =
-          notice.batchId == null ||
-              notice.batchId!.isEmpty ||
-              notice.batchId == batchId;
+      final String noticeBatchId =
+          notice.batchId?.trim().toLowerCase() ?? '';
 
-      final campusMatch =
-          notice.campusId == null ||
-              notice.campusId!.isEmpty ||
-              notice.campusId == campusId;
+      final String noticeCampusId =
+          notice.campusId?.trim().toLowerCase() ?? '';
+
+      // General notice = visible to everyone
+      final bool courseMatch =
+          noticeCourseId.isEmpty ||
+              noticeCourseId == normalizedCourseId;
+
+      final bool batchMatch =
+          noticeBatchId.isEmpty ||
+              noticeBatchId == normalizedBatchId;
+
+      final bool campusMatch =
+          noticeCampusId.isEmpty ||
+              noticeCampusId == normalizedCampusId;
 
       return courseMatch &&
           batchMatch &&
           campusMatch;
     }).toList();
 
+    // Latest notices first
     notices.sort((a, b) {
       final aDate = a.createdAt;
       final bDate = b.createdAt;
@@ -91,20 +92,36 @@ class NoticeService {
     return notices;
   }
 
+  // ============================================================
+  // GET NOTICE BY ID
+  // ============================================================
+
   Future<NoticeModel?> getNoticeById(
       String noticeId,
       ) async {
+    final String trimmedId = noticeId.trim();
+
+    if (trimmedId.isEmpty) {
+      return null;
+    }
+
     final doc = await _firestore
-        .collection(
-      CollectionNames.notices,
-    )
-        .doc(noticeId)
+        .collection(CollectionNames.notices)
+        .doc(trimmedId)
         .get();
 
     if (!doc.exists) {
       return null;
     }
 
-    return NoticeModel.fromFirestore(doc);
+    final notice =
+    NoticeModel.fromFirestore(doc);
+
+    // Inactive notice should not be displayed.
+    if (!notice.isActive) {
+      return null;
+    }
+
+    return notice;
   }
 }

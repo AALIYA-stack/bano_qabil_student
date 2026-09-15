@@ -1,64 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 class ModuleSeedData {
   ModuleSeedData._();
 
   static List<Map<String, dynamic>> get modules {
     return [
       {
-        'id': 'flutter-module-001',
-        'courseId': 'flutter-development',
-        'title': 'Dart Fundamentals',
-        'description':
-        'Variables, data types, functions and collections.',
+        'id': 'module-01',
+        'courseId': 'flutter',
+        'title': 'Flutter Basics',
+        'description': 'Introduction to Flutter and Dart basics.',
         'order': 1,
         'isActive': true,
       },
       {
-        'id': 'flutter-module-002',
-        'courseId': 'flutter-development',
-        'title': 'Object Oriented Programming',
-        'description':
-        'Classes, objects, constructors and inheritance.',
+        'id': 'module-02',
+        'courseId': 'flutter',
+        'title': 'Widgets and Layouts',
+        'description': 'Learn Flutter widgets and responsive layouts.',
         'order': 2,
         'isActive': true,
       },
       {
-        'id': 'flutter-module-003',
-        'courseId': 'flutter-development',
-        'title': 'Flutter UI Development',
-        'description':
-        'Widgets, layouts, themes and responsive interfaces.',
+        'id': 'module-03',
+        'courseId': 'flutter',
+        'title': 'Navigation and Firebase',
+        'description': 'Learn navigation and Firebase integration.',
         'order': 3,
-        'isActive': true,
-      },
-      {
-        'id': 'flutter-module-004',
-        'courseId': 'flutter-development',
-        'title': 'Navigation and Forms',
-        'description':
-        'Navigation, forms and input validation.',
-        'order': 4,
-        'isActive': true,
-      },
-      {
-        'id': 'flutter-module-005',
-        'courseId': 'flutter-development',
-        'title': 'Firebase Integration',
-        'description':
-        'Authentication, Firestore and Firebase Storage.',
-        'order': 5,
-        'isActive': true,
-      },
-      {
-        'id': 'flutter-module-006',
-        'courseId': 'flutter-development',
-        'title': 'Final Mini Project',
-        'description':
-        'Build and present a complete Flutter application.',
-        'order': 6,
         'isActive': true,
       },
     ];
   }
 }
+
