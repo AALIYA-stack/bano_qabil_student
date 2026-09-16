@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/constants/collection_names.dart';
@@ -7,7 +8,7 @@ class AssignmentService {
   AssignmentService._();
 
   static final AssignmentService instance =
-  AssignmentService._();
+      AssignmentService._();
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
@@ -24,9 +25,23 @@ class AssignmentService {
   }
 
   // ============================================================
-  // GET ASSIGNMENTS FOR BATCH
+  // ============================================================
+  // CREATE ASSIGNMENT
   // ============================================================
 
+  Future<String> createAssignment(
+      AssignmentModel assignment,
+      ) async {
+    final doc = await _assignments.add(
+      assignment.toFirestore(),
+    );
+
+    return doc.id;
+  }
+
+  // ============================================================
+  // GET ASSIGNMENTS FOR BATCH
+  // ============================================================
   Future<List<AssignmentModel>>
   getAssignmentsForBatch(
       String batchId,
@@ -116,3 +131,4 @@ class AssignmentService {
     );
   }
 }
+

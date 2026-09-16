@@ -1,22 +1,25 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../../services/auth_service.dart';
+import '../../../models/user_model.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_dimensions.dart';
 import '../../../app/theme/app_text_styles.dart';
-import '../../../models/user_model.dart';
-import '../../../services/auth_service.dart';
+
+import '../../student/attendence/screen/attendance_screen.dart';
+import 'create_assignment_screen.dart';
+import 'instructor_submissions_screen.dart';
 
 class InstructorHomeScreen extends StatefulWidget {
   const InstructorHomeScreen({super.key});
 
   @override
-  State<InstructorHomeScreen> createState() =>
-      _InstructorHomeScreenState();
+  State<InstructorHomeScreen> createState() => _InstructorHomeScreenState();
 }
 
-class _InstructorHomeScreenState
-    extends State<InstructorHomeScreen> {
+class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
   int _selectedIndex = 0;
 
   String _instructorName = 'Instructor';
@@ -27,36 +30,22 @@ class _InstructorHomeScreenState
     _loadInstructorProfile();
   }
 
-  // ============================================================
-  // LOAD INSTRUCTOR PROFILE
-  // ============================================================
-
   Future<void> _loadInstructorProfile() async {
     try {
       final UserModel? profile =
-      await AuthService.instance.getCurrentUserProfile();
+          await AuthService.instance.getCurrentUserProfile();
 
       if (!mounted || profile == null) {
         return;
       }
 
-      final name = profile.name.trim();
-
-      if (name.isEmpty) {
-        return;
-      }
-
       setState(() {
-        _instructorName = name;
+        _instructorName = profile.name.trim();
       });
     } catch (e) {
-      // Keep default instructor name.
+      // Keep the default name if the profile cannot be loaded.
     }
   }
-
-  // ============================================================
-  // GET TODAY'S CLASSES
-  // ============================================================
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _getTodayClasses() {
     final user = AuthService.instance.currentUser;
@@ -67,72 +56,35 @@ class _InstructorHomeScreenState
 
     return FirebaseFirestore.instance
         .collection('batches')
-        .where(
-      'instructorId',
-      isEqualTo: user.uid,
-    )
-        .where(
-      'status',
-      isEqualTo: 'active',
-    )
+        .where('instructorId', isEqualTo: user.uid)
+        .where('status', isEqualTo: 'active')
         .snapshots();
   }
 
-  // ============================================================
-  // DEMO PENDING SUBMISSIONS
-  // ============================================================
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getPendingSubmissions() {
+    return FirebaseFirestore.instance
+        .collection('submissions')
+        .where('status', isEqualTo: 'submitted')
+        .snapshots();
+  }
 
-  final List<Map<String, dynamic>> _pendingSubmissions = [
-    {
-      'student': 'Ali Raza',
-      'assignment': 'Flutter UI Assignment',
-      'batch': 'Flutter Batch 01',
-    },
-    {
-      'student': 'Sara Ahmed',
-      'assignment': 'Firebase Quiz',
-      'batch': 'Flutter Batch 01',
-    },
-  ];
-
-  // ============================================================
-  // DEMO STUDENTS BEHIND
-  // ============================================================
-
-  final List<Map<String, dynamic>> _behindStudents = [
-    {
-      'student': 'Ahmed Khan',
-      'batch': 'Flutter Batch 01',
-      'progress': '45%',
-    },
-    {
-      'student': 'Fatima Noor',
-      'batch': 'Flutter Batch 01',
-      'progress': '52%',
-    },
-  ];
-
-  // ============================================================
-  // BUILD
-  // ============================================================
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getBehindStudents() {
+    return FirebaseFirestore.instance
+        .collection('students')
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Instructor Dashboard',
-        ),
+        title: const Text('Instructor Dashboard'),
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-            ),
+            icon: const Icon(Icons.notifications_none_rounded),
           ),
-          const SizedBox(
-            width: AppDimensions.paddingSmall,
-          ),
+          const SizedBox(width: AppDimensions.paddingSmall),
         ],
       ),
       body: IndexedStack(
@@ -153,39 +105,23 @@ class _InstructorHomeScreenState
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(
-              Icons.dashboard_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.dashboard_rounded,
-            ),
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard_rounded),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.groups_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.groups_rounded,
-            ),
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups_rounded),
             label: 'Classes',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.assignment_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.assignment_rounded,
-            ),
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment_rounded),
             label: 'Work',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.person_outline_rounded,
-            ),
-            selectedIcon: Icon(
-              Icons.person_rounded,
-            ),
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
             label: 'Profile',
           ),
         ],
@@ -193,25 +129,18 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // DASHBOARD
-  // ============================================================
-
   Widget _buildDashboard() {
     return RefreshIndicator(
-      onRefresh: _loadInstructorProfile,
+      onRefresh: () async {
+        await Future.delayed(const Duration(milliseconds: 500));
+      },
       child: ListView(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(
-          AppDimensions.paddingMedium,
-        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         children: [
           _buildWelcomeCard(),
 
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
+          const SizedBox(height: AppDimensions.spacingLarge),
 
           _buildSectionHeader(
             title: "Today's Classes",
@@ -219,27 +148,18 @@ class _InstructorHomeScreenState
             onActionPressed: () {},
           ),
 
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
-          ),
+          const SizedBox(height: AppDimensions.spacingMedium),
 
-          StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: _getTodayClasses(),
-            builder: (
-                context,
-                snapshot,
-                ) {
-              if (snapshot.connectionState ==
-                  ConnectionState.waiting) {
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(
-                    vertical:
-                    AppDimensions.paddingLarge,
+                    vertical: AppDimensions.paddingLarge,
                   ),
                   child: Center(
-                    child:
-                    CircularProgressIndicator(),
+                    child: CircularProgressIndicator(),
                   ),
                 );
               }
@@ -252,15 +172,13 @@ class _InstructorHomeScreenState
                     ),
                     child: Text(
                       'Unable to load classes.',
-                      style:
-                      AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium,
                     ),
                   ),
                 );
               }
 
-              final batches =
-                  snapshot.data?.docs ?? [];
+              final batches = snapshot.data?.docs ?? [];
 
               if (batches.isEmpty) {
                 return Card(
@@ -272,19 +190,15 @@ class _InstructorHomeScreenState
                       children: [
                         const Icon(
                           Icons.class_outlined,
-                          size: AppDimensions
-                              .iconXLarge,
-                          color:
-                          AppColors.textLight,
+                          size: AppDimensions.iconXLarge,
+                          color: AppColors.textLight,
                         ),
                         const SizedBox(
-                          height: AppDimensions
-                              .spacingSmall,
+                          height: AppDimensions.spacingSmall,
                         ),
                         Text(
                           'No classes found for today.',
-                          style: AppTextStyles
-                              .bodyMedium,
+                          style: AppTextStyles.bodyMedium,
                         ),
                       ],
                     ),
@@ -293,60 +207,43 @@ class _InstructorHomeScreenState
               }
 
               return Column(
-                children:
-                batches.map((doc) {
+                children: batches.map((doc) {
                   final data = doc.data();
 
                   final studentIds =
-                      (data['studentIds']
-                      as List<dynamic>?) ??
-                          [];
+                      (data['studentIds'] as List<dynamic>?) ?? [];
 
                   final courseId =
-                  (data['courseId'] ?? '')
-                      .toString();
+                      (data['courseId'] ?? '').toString();
 
                   return FutureBuilder<
-                      DocumentSnapshot<
-                          Map<String, dynamic>>>(
+                      DocumentSnapshot<Map<String, dynamic>>>(
                     future: courseId.isEmpty
                         ? null
-                        : FirebaseFirestore
-                        .instance
-                        .collection('courses')
-                        .doc(courseId)
-                        .get(),
-                    builder: (
-                        context,
-                        courseSnapshot,
-                        ) {
-                      String courseName =
-                          'Course';
+                        : FirebaseFirestore.instance
+                            .collection('courses')
+                            .doc(courseId)
+                            .get(),
+                    builder: (context, courseSnapshot) {
+                      String courseName = 'Course';
 
-                      if (courseSnapshot
-                          .hasData &&
-                          courseSnapshot
-                              .data!.exists) {
+                      if (courseSnapshot.hasData &&
+                          courseSnapshot.data!.exists) {
                         final courseData =
-                        courseSnapshot.data!
-                            .data();
+                            courseSnapshot.data!.data();
 
                         courseName =
-                            (courseData?['name'] ??
-                                'Course')
+                            (courseData?['name'] ?? 'Course')
                                 .toString();
                       }
 
                       return _buildClassCard({
-                        'batch':
-                        (data['name'] ??
-                            'Unnamed Batch')
+                        'batch': (data['name'] ??
+                                'Unnamed Batch')
                             .toString(),
                         'course': courseName,
-                        'time':
-                        'Schedule not available',
-                        'students':
-                        studentIds.length,
+                        'time': 'Schedule not available',
+                        'students': studentIds.length,
                       });
                     },
                   );
@@ -355,9 +252,7 @@ class _InstructorHomeScreenState
             },
           ),
 
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
+          const SizedBox(height: AppDimensions.spacingLarge),
 
           _buildSectionHeader(
             title: 'Quick Actions',
@@ -365,66 +260,322 @@ class _InstructorHomeScreenState
             onActionPressed: () {},
           ),
 
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
-          ),
+          const SizedBox(height: AppDimensions.spacingMedium),
 
           _buildQuickActions(),
 
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
+          const SizedBox(height: AppDimensions.spacingLarge),
 
           _buildSectionHeader(
             title: 'Pending Submissions',
             actionText: 'View All',
-            onActionPressed: () {},
+            onActionPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const InstructorSubmissionsScreen(),
+                ),
+              );
+            },
           ),
 
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
+          const SizedBox(height: AppDimensions.spacingMedium),
+
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _getPendingSubmissions(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: AppDimensions.paddingLarge,
+                  ),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingMedium,
+                    ),
+                    child: Text(
+                      'Unable to load submissions.',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                );
+              }
+
+              final submissions = snapshot.data?.docs ?? [];
+
+              if (submissions.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingLarge,
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.assignment_turned_in_outlined,
+                          size: AppDimensions.iconXLarge,
+                          color: AppColors.textLight,
+                        ),
+                        const SizedBox(
+                          height: AppDimensions.spacingSmall,
+                        ),
+                        Text(
+                          'No pending submissions.',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: submissions.map((doc) {
+                  final data = doc.data();
+
+                  return FutureBuilder<
+                      List<DocumentSnapshot<Map<String, dynamic>>>>(
+                    future: Future.wait([
+                      FirebaseFirestore.instance
+                          .collection('assignments')
+                          .doc(data['assignmentId'])
+                          .get(),
+                      FirebaseFirestore.instance
+                          .collection('applications')
+                          .where(
+                            'studentId',
+                            isEqualTo: data['studentId'],
+                          )
+                          .limit(1)
+                          .get()
+                          .then(
+                            (snapshot) =>
+                                snapshot.docs.isNotEmpty
+                                    ? snapshot.docs.first
+                                    : FirebaseFirestore.instance
+                                        .collection('applications')
+                                        .doc('_not_found_')
+                                        .get(),
+                          ),
+                    ]),
+                    builder: (context, relatedSnapshot) {
+                      if (relatedSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppDimensions.paddingSmall,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      if (relatedSnapshot.hasError ||
+                          !relatedSnapshot.hasData) {
+                        return _buildSubmissionCard({
+                          'student': 'Student',
+                          'assignment': 'Assignment',
+                          'batch': 'Batch',
+                        });
+                      }
+
+                      final assignment =
+                          relatedSnapshot.data![0].data();
+
+                      final application =
+                          relatedSnapshot.data![1].data();
+
+                      final instructorId =
+                          AuthService.instance.currentUser?.uid;
+
+                      if (assignment == null ||
+                          assignment['instructorId'] !=
+                              instructorId) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return _buildSubmissionCard({
+                        'student':
+                            application?['fullName'] ?? 'Student',
+                        'assignment':
+                            assignment['title'] ?? 'Assignment',
+                        'batch':
+                            assignment['flutter'] ?? 'Batch',
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
           ),
 
-          ..._pendingSubmissions.map(
-            _buildSubmissionCard,
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
+          const SizedBox(height: AppDimensions.spacingLarge),
 
           _buildSectionHeader(
-            title:
-            'Students Behind on Work',
+            title: 'Students Behind on Work',
             actionText: 'View Progress',
             onActionPressed: () {},
           ),
 
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
+          const SizedBox(height: AppDimensions.spacingMedium),
+
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _getBehindStudents(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: AppDimensions.paddingLarge,
+                  ),
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingMedium,
+                    ),
+                    child: Text(
+                      'Unable to load student progress.',
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                  ),
+                );
+              }
+
+              final studentDocs = snapshot.data?.docs ?? [];
+
+              if (studentDocs.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                      AppDimensions.paddingLarge,
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.people_outline_rounded,
+                          size: AppDimensions.iconXLarge,
+                          color: AppColors.textLight,
+                        ),
+                        const SizedBox(
+                          height: AppDimensions.spacingSmall,
+                        ),
+                        Text(
+                          'No student progress found.',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: studentDocs.map((studentDoc) {
+                  final studentData = studentDoc.data();
+
+                  final uid =
+                      (studentData['uid'] ?? '').toString();
+
+                  final completed = int.tryParse(
+                        (studentData['completedAssignments'] ?? '0')
+                            .toString(),
+                      ) ??
+                      0;
+
+                  final total = int.tryParse(
+                        (studentData['totalAssignments'] ?? '0')
+                            .toString(),
+                      ) ??
+                      0;
+
+                  if (total <= 0) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final progress = completed / total;
+
+                  // Show students whose assignment progress is below 60%.
+                  if (progress >= 0.60) {
+                    return const SizedBox.shrink();
+                  }
+
+                  if (uid.isEmpty) {
+                    return _buildProgressCard({
+                      'student': 'Student',
+                      'batch': 'Batch',
+                      'progress':
+                          '${(progress * 100).round()}%',
+                    });
+                  }
+
+                  return FutureBuilder<
+                      DocumentSnapshot<Map<String, dynamic>>>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(uid)
+                        .get(),
+                    builder: (context, userSnapshot) {
+                      if (userSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppDimensions.paddingSmall,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      final userData =
+                          userSnapshot.data?.data();
+
+                      final studentName =
+                          (userData?['name'] ?? 'Student')
+                              .toString();
+
+                      final batch =
+                          (userData?['batchid'] ?? 'Batch')
+                              .toString();
+
+                      return _buildProgressCard({
+                        'student': studentName,
+                        'batch': batch,
+                        'progress':
+                            '${(progress * 100).round()}%',
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
           ),
 
-          ..._behindStudents.map(
-            _buildProgressCard,
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
+          const SizedBox(height: AppDimensions.spacingLarge),
         ],
       ),
     );
   }
 
-  // ============================================================
-  // WELCOME CARD
-  // ============================================================
-
   Widget _buildWelcomeCard() {
     return Container(
-      padding: const EdgeInsets.all(
-        AppDimensions.paddingLarge,
-      ),
+      padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -444,9 +595,7 @@ class _InstructorHomeScreenState
             width: AppDimensions.avatarLarge,
             height: AppDimensions.avatarLarge,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(
-                alpha: 0.18,
-              ),
+              color: Colors.white.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -460,16 +609,14 @@ class _InstructorHomeScreenState
           ),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Welcome back!',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,
-                    fontWeight:
-                    FontWeight.w500,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -478,8 +625,7 @@ class _InstructorHomeScreenState
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
-                    fontWeight:
-                    FontWeight.w700,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -498,18 +644,13 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // SECTION HEADER
-  // ============================================================
-
   Widget _buildSectionHeader({
     required String title,
     required String actionText,
     required VoidCallback onActionPressed,
   }) {
     return Row(
-      mainAxisAlignment:
-      MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
@@ -524,13 +665,7 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // CLASS CARD
-  // ============================================================
-
-  Widget _buildClassCard(
-      Map<String, dynamic> classData,
-      ) {
+  Widget _buildClassCard(Map<String, dynamic> classData) {
     return Card(
       margin: const EdgeInsets.only(
         bottom: AppDimensions.spacingSmall,
@@ -546,15 +681,13 @@ class _InstructorHomeScreenState
               height: 48,
               decoration: BoxDecoration(
                 color: AppColors.accentLight,
-                borderRadius:
-                BorderRadius.circular(
+                borderRadius: BorderRadius.circular(
                   AppDimensions.radiusMedium,
                 ),
               ),
               child: const Icon(
                 Icons.class_rounded,
-                color:
-                AppColors.banoQabilGreen,
+                color: AppColors.banoQabilGreen,
               ),
             ),
             const SizedBox(
@@ -563,52 +696,40 @@ class _InstructorHomeScreenState
             Expanded(
               child: Column(
                 crossAxisAlignment:
-                CrossAxisAlignment.start,
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
-                    classData['batch'].toString(),
-                    style:
-                    AppTextStyles.cardTitle,
+                    classData['batch'],
+                    style: AppTextStyles.cardTitle,
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    classData['course'].toString(),
-                    style:
-                    AppTextStyles.cardSubtitle,
+                    classData['course'],
+                    style: AppTextStyles.cardSubtitle,
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       const Icon(
-                        Icons
-                            .access_time_rounded,
-                        size: AppDimensions
-                            .iconSmall,
-                        color: AppColors
-                            .textSecondary,
+                        Icons.access_time_rounded,
+                        size: AppDimensions.iconSmall,
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          classData['time']
-                              .toString(),
-                          style: AppTextStyles
-                              .bodySmall,
-                        ),
+                      Text(
+                        classData['time'],
+                        style: AppTextStyles.bodySmall,
                       ),
+                      const SizedBox(width: 12),
                       const Icon(
-                        Icons
-                            .people_outline_rounded,
-                        size: AppDimensions
-                            .iconSmall,
-                        color: AppColors
-                            .textSecondary,
+                        Icons.people_outline_rounded,
+                        size: AppDimensions.iconSmall,
+                        color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${classData['students']} students',
-                        style: AppTextStyles
-                            .bodySmall,
+                        style: AppTextStyles.bodySmall,
                       ),
                     ],
                   ),
@@ -625,31 +746,38 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // QUICK ACTIONS
-  // ============================================================
-
   Widget _buildQuickActions() {
     return GridView.count(
       crossAxisCount: 3,
-      crossAxisSpacing:
-      AppDimensions.spacingSmall,
-      mainAxisSpacing:
-      AppDimensions.spacingSmall,
+      crossAxisSpacing: AppDimensions.spacingSmall,
+      mainAxisSpacing: AppDimensions.spacingSmall,
       childAspectRatio: 0.95,
       shrinkWrap: true,
-      physics:
-      const NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       children: [
         _buildActionCard(
           icon: Icons.fact_check_outlined,
           title: 'Attendance',
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AttendanceScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           icon: Icons.add_task_rounded,
           title: 'Assignment',
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CreateAssignmentScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           icon: Icons.campaign_outlined,
@@ -676,33 +804,27 @@ class _InstructorHomeScreenState
             AppDimensions.paddingSmall,
           ),
           child: Column(
-            mainAxisAlignment:
-            MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color:
-                  AppColors.accentLight,
-                  borderRadius:
-                  BorderRadius.circular(
+                  color: AppColors.accentLight,
+                  borderRadius: BorderRadius.circular(
                     AppDimensions.radiusMedium,
                   ),
                 ),
                 child: Icon(
                   icon,
-                  color:
-                  AppColors.banoQabilGreen,
+                  color: AppColors.banoQabilGreen,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 title,
-                textAlign:
-                TextAlign.center,
-                style: AppTextStyles
-                    .labelMedium,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelMedium,
               ),
             ],
           ),
@@ -711,37 +833,28 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // SUBMISSION CARD
-  // ============================================================
-
   Widget _buildSubmissionCard(
-      Map<String, dynamic> submission,
-      ) {
+    Map<String, dynamic> submission,
+  ) {
     return Card(
       margin: const EdgeInsets.only(
         bottom: AppDimensions.spacingSmall,
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor:
-          AppColors.accentLight,
+          backgroundColor: AppColors.accentLight,
           child: const Icon(
             Icons.assignment_outlined,
-            color:
-            AppColors.banoQabilGreen,
+            color: AppColors.banoQabilGreen,
           ),
         ),
         title: Text(
-          submission['student'].toString(),
-          style:
-          AppTextStyles.cardTitle,
+          submission['student'],
+          style: AppTextStyles.cardTitle,
         ),
         subtitle: Text(
-          '${submission['assignment']} • '
-              '${submission['batch']}',
-          style:
-          AppTextStyles.cardSubtitle,
+          '${submission['assignment']} • ${submission['batch']}',
+          style: AppTextStyles.cardSubtitle,
         ),
         trailing: const Icon(
           Icons.chevron_right_rounded,
@@ -751,25 +864,9 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // PROGRESS CARD
-  // ============================================================
-
   Widget _buildProgressCard(
-      Map<String, dynamic> student,
-      ) {
-    final progressText =
-    student['progress'].toString();
-
-    final progress =
-        double.tryParse(
-          progressText.replaceAll(
-            '%',
-            '',
-          ),
-        ) ??
-            0;
-
+    Map<String, dynamic> student,
+  ) {
     return Card(
       margin: const EdgeInsets.only(
         bottom: AppDimensions.spacingSmall,
@@ -781,58 +878,49 @@ class _InstructorHomeScreenState
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor:
-              AppColors.errorBackground,
+              backgroundColor: AppColors.errorBackground,
               child: const Icon(
-                Icons
-                    .person_outline_rounded,
+                Icons.person_outline_rounded,
                 color: AppColors.error,
               ),
             ),
             const SizedBox(
-              width:
-              AppDimensions.spacingMedium,
+              width: AppDimensions.spacingMedium,
             ),
             Expanded(
               child: Column(
                 crossAxisAlignment:
-                CrossAxisAlignment.start,
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
-                    student['student']
-                        .toString(),
-                    style:
-                    AppTextStyles.cardTitle,
+                    student['student'],
+                    style: AppTextStyles.cardTitle,
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    student['batch']
-                        .toString(),
-                    style:
-                    AppTextStyles.cardSubtitle,
+                    student['batch'],
+                    style: AppTextStyles.cardSubtitle,
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value: (progress / 100)
-                        .clamp(0.0, 1.0),
+                    value: double.parse(
+                          student['progress']
+                              .replaceAll('%', ''),
+                        ) /
+                        100,
                     minHeight: 6,
                     borderRadius:
-                    BorderRadius.circular(
-                      10,
-                    ),
+                        BorderRadius.circular(10),
                   ),
                 ],
               ),
             ),
             const SizedBox(
-              width:
-              AppDimensions.spacingMedium,
+              width: AppDimensions.spacingMedium,
             ),
             Text(
-              progressText,
-              style: AppTextStyles
-                  .labelLarge
-                  .copyWith(
+              student['progress'],
+              style: AppTextStyles.labelLarge.copyWith(
                 color: AppColors.error,
               ),
             ),
@@ -842,13 +930,7 @@ class _InstructorHomeScreenState
     );
   }
 
-  // ============================================================
-  // PLACEHOLDER
-  // ============================================================
-
-  Widget _buildPlaceholder(
-      String title,
-      ) {
+  Widget _buildPlaceholder(String title) {
     return Center(
       child: Text(
         title,
@@ -857,3 +939,4 @@ class _InstructorHomeScreenState
     );
   }
 }
+

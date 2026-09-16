@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+<<<<<<< HEAD
 // ============================================================
 // AUTH
 // ============================================================
 
-import '../../data/seed_data/seed_data_screen.dart';
+import '../../data/seed_data/seed_data_screen.dart';=======
+>>>>>>> origin/member-a
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
@@ -108,7 +110,7 @@ class AppRoutes {
       // ========================================================
 
       instructorHome: (context) =>
-      const InstructorHomeScreen(),
+          const InstructorHomeScreen(),
 
       // ========================================================
       // COORDINATOR
@@ -126,3 +128,4 @@ class AppRoutes {
     };
   }
 }
+

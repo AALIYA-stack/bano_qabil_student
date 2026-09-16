@@ -11,5 +11,8 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const BanoQabilApp());
+  runApp(
+    const BanoQabilApp(),
+  );
 }
+
