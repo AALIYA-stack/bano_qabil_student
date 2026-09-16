@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'app_colors.dart';
 import 'app_dimensions.dart';
 
@@ -10,15 +11,15 @@ class AppTheme {
   // ============================================================
 
   static ThemeData get lightTheme {
-    final colorScheme = ColorScheme.fromSeed(
+    final ColorScheme colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.banoQabilGreen,
       brightness: Brightness.light,
     ).copyWith(
       primary: AppColors.banoQabilGreen,
       onPrimary: Colors.white,
 
-      secondary: AppColors.banoQabilTeal,
-      onSecondary: Colors.white,
+      secondary: AppColors.banoQabilLightGreen,
+      onSecondary: AppColors.textPrimary,
 
       surface: AppColors.surface,
       onSurface: AppColors.textPrimary,
@@ -28,9 +29,9 @@ class AppTheme {
     );
 
     return ThemeData(
-      // ----------------------------------------------------------
+      // ========================================================
       // MATERIAL
-      // ----------------------------------------------------------
+      // ========================================================
 
       useMaterial3: true,
 
@@ -42,15 +43,19 @@ class AppTheme {
 
       visualDensity: VisualDensity.adaptivePlatformDensity,
 
-      // ----------------------------------------------------------
+      // ========================================================
       // APP BAR
-      // ----------------------------------------------------------
+      // ========================================================
 
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surface,
+
         foregroundColor: AppColors.textPrimary,
+
         elevation: 0,
+
         scrolledUnderElevation: 0,
+
         centerTitle: false,
 
         titleTextStyle: TextStyle(
@@ -60,18 +65,20 @@ class AppTheme {
         ),
 
         iconTheme: IconThemeData(
-          color: AppColors.textPrimary,
+          color: AppColors.banoQabilGreen,
           size: AppDimensions.iconMedium,
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // CARD
-      // ----------------------------------------------------------
+      // ========================================================
 
       cardTheme: CardThemeData(
         color: AppColors.surface,
+
         elevation: 0,
+
         margin: EdgeInsets.zero,
 
         shape: RoundedRectangleBorder(
@@ -84,9 +91,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // INPUT FIELDS
-      // ----------------------------------------------------------
+      // ========================================================
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -113,7 +120,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
 
-        prefixIconColor: AppColors.textSecondary,
+        prefixIconColor: AppColors.banoQabilGreen,
 
         suffixIconColor: AppColors.textSecondary,
 
@@ -165,9 +172,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // ELEVATED BUTTON
-      // ----------------------------------------------------------
+      // ========================================================
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -199,9 +206,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // OUTLINED BUTTON
-      // ----------------------------------------------------------
+      // ========================================================
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -234,9 +241,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // TEXT BUTTON
-      // ----------------------------------------------------------
+      // ========================================================
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -255,19 +262,22 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // FLOATING ACTION BUTTON
-      // ----------------------------------------------------------
+      // ========================================================
 
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme:
+      const FloatingActionButtonThemeData(
         backgroundColor: AppColors.banoQabilGreen,
+
         foregroundColor: Colors.white,
+
         elevation: 3,
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // CHECKBOX
-      // ----------------------------------------------------------
+      // ========================================================
 
       checkboxTheme: CheckboxThemeData(
         shape: RoundedRectangleBorder(
@@ -294,9 +304,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // RADIO
-      // ----------------------------------------------------------
+      // ========================================================
 
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
@@ -310,9 +320,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // SWITCH
-      // ----------------------------------------------------------
+      // ========================================================
 
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
@@ -336,31 +346,34 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // PROGRESS INDICATOR
-      // ----------------------------------------------------------
+      // ========================================================
 
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.banoQabilTeal,
+      progressIndicatorTheme:
+      const ProgressIndicatorThemeData(
+        color: AppColors.banoQabilGreen,
 
         linearTrackColor: AppColors.surfaceVariant,
 
         circularTrackColor: AppColors.surfaceVariant,
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // DIVIDER
-      // ----------------------------------------------------------
+      // ========================================================
 
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
+
         thickness: 1,
+
         space: 1,
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // CHIP
-      // ----------------------------------------------------------
+      // ========================================================
 
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,
@@ -393,14 +406,14 @@ class AppTheme {
         side: BorderSide.none,
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // SNACKBAR
-      // ----------------------------------------------------------
+      // ========================================================
 
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
 
-        backgroundColor: AppColors.textPrimary,
+        backgroundColor: AppColors.banoQabilDarkGreen,
 
         contentTextStyle: const TextStyle(
           color: Colors.white,
@@ -419,9 +432,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // DIALOG
-      // ----------------------------------------------------------
+      // ========================================================
 
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
@@ -447,9 +460,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // BOTTOM SHEET
-      // ----------------------------------------------------------
+      // ========================================================
 
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surface,
@@ -458,7 +471,7 @@ class AppTheme {
 
         showDragHandle: true,
 
-        dragHandleColor: AppColors.border,
+        dragHandleColor: AppColors.banoQabilGreen,
 
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
@@ -469,9 +482,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // NAVIGATION BAR
-      // ----------------------------------------------------------
+      // ========================================================
 
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
@@ -503,7 +516,7 @@ class AppTheme {
 
         labelTextStyle: WidgetStateProperty.resolveWith(
               (states) {
-            final selected =
+            final bool selected =
             states.contains(WidgetState.selected);
 
             return TextStyle(
@@ -518,9 +531,9 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // LIST TILE
-      // ----------------------------------------------------------
+      // ========================================================
 
       listTileTheme: const ListTileThemeData(
         iconColor: AppColors.banoQabilGreen,
@@ -537,13 +550,14 @@ class AppTheme {
         ),
       ),
 
-      // ----------------------------------------------------------
+      // ========================================================
       // TOOLTIP
-      // ----------------------------------------------------------
+      // ========================================================
 
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: AppColors.textPrimary,
+          color: AppColors.banoQabilDarkGreen,
+
           borderRadius: BorderRadius.circular(
             AppDimensions.radiusSmall,
           ),

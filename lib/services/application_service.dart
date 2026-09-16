@@ -5,183 +5,342 @@ import '../core/constants/collection_names.dart';
 import '../models/application_model.dart';
 
 class ApplicationService {
-  ApplicationService._();
+ApplicationService._();
 
-  static final ApplicationService instance =
-  ApplicationService._();
+static final ApplicationService instance =
+ApplicationService._();
 
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+final FirebaseFirestore _firestore =
+FirebaseFirestore.instance;
 
-  final FirebaseAuth _auth =
-      FirebaseAuth.instance;
+final FirebaseAuth _auth =
+FirebaseAuth.instance;
 
-  // ============================================================
-  // CURRENT USER ID
-  // ============================================================
+// ============================================================
+// CURRENT USER ID
+// ============================================================
 
-  String get _uid {
-    final user = _auth.currentUser;
+String get _uid {
+final user = _auth.currentUser;
 
-    if (user == null) {
-      throw Exception('User is not logged in.');
-    }
+if (user == null) {
+throw Exception('User is not logged in.');
+}
 
-    return user.uid;
-  }
+return user.uid;
+}
 
-  // ============================================================
-  // APPLICATIONS COLLECTION
-  // ============================================================
+// ============================================================
+// APPLICATIONS COLLECTION
+// ============================================================
 
-  CollectionReference<Map<String, dynamic>>
-  get _applications {
-    return _firestore.collection(
-      CollectionNames.applications,
-    );
-  }
+CollectionReference<Map<String, dynamic>>
+get _applications {
+return _firestore.collection(
+CollectionNames.applications,
+);
+}
 
-  // ============================================================
-  // SUBMIT APPLICATION
-  // ============================================================
+// ============================================================
+// CHECK WHETHER STATUS IS ACTIVE
+// ============================================================
 
-  Future<String> submitApplication({
-    required String fullName,
-    required String cnic,
-    required String education,
-    required String city,
-    required String courseId,
-    required String courseName,
-    required String campusId,
-    required String campusName,
-    required String batchId,
-    required String whyJoin,
-  }) async {
-    final uid = _uid;
+bool _isActiveStatus(String status) {
+final normalizedStatus =
+status.trim().toLowerCase();
 
-    final existingSnapshot = await _applications
-        .where(
-      'studentId',
-      isEqualTo: uid,
-    )
-        .get();
+return normalizedStatus == 'submitted' ||
+normalizedStatus == 'under_review' ||
+normalizedStatus == 'interview_test' ||
+normalizedStatus == 'accepted' ||
+normalizedStatus == 'waiting_list';
+}
 
-    // Check duplicate batch locally.
-    for (final doc in existingSnapshot.docs) {
-      final data = doc.data();
+// ============================================================
+// SUBMIT APPLICATION
+// ============================================================
 
-      final existingBatchId =
-          data['batchId']?.toString() ?? '';
+Future<String> submitApplication({
+required String fullName,
+required String cnic,
+required String education,
+required String city,
+required String courseId,
+required String courseName,
+required String campusId,
+required String campusName,
+required String batchId,
+required String whyJoin,
+}) async {
+final uid = _uid;
 
-      if (existingBatchId == batchId) {
-        throw Exception(
-          'You have already applied for this batch.',
-        );
-      }
-    }
+// ==========================================================
+// GET ALL APPLICATIONS OF CURRENT STUDENT
+// ==========================================================
 
-    final docRef = _applications.doc();
+final existingSnapshot = await _applications
+    .where(
+'studentId',
+isEqualTo: uid,
+)
+    .get();
 
-    final application = ApplicationModel(
-      id: docRef.id,
-      studentId: uid,
-      fullName: fullName.trim(),
-      cnic: cnic.trim(),
-      education: education.trim(),
-      city: city.trim(),
-      courseId: courseId,
-      courseName: courseName,
-      campusId: campusId,
-      campusName: campusName,
-      batchId: batchId,
-      whyJoin: whyJoin.trim(),
-      status: 'submitted',
-    );
+// ==========================================================
+// CHECK EXISTING APPLICATIONS
+// ==========================================================
 
-    await docRef.set(
-      application.toFirestore(),
-    );
+for (final doc in existingSnapshot.docs) {
+final data = doc.data();
 
-    return docRef.id;
-  }
+final status =
+data['status']?.toString().trim().toLowerCase() ?? '';
 
-  // ============================================================
-  // GET CURRENT STUDENT'S LATEST APPLICATION
-  // ============================================================
+final existingBatchId =
+data['batchId']?.toString().trim() ?? '';
 
-  Future<ApplicationModel?> getMyApplication() async {
-    final uid = _uid;
+final existingCourseId =
+data['courseId']?.toString().trim() ?? '';
 
-    final snapshot = await _applications
-        .where(
-      'studentId',
-      isEqualTo: uid,
-    )
-        .get();
+// ========================================================
+// ACTIVE APPLICATION
+// ========================================================
 
-    if (snapshot.docs.isEmpty) {
-      return null;
-    }
+if (_isActiveStatus(status)) {
+// ------------------------------------------------------
+// SAME BATCH
+// ------------------------------------------------------
 
-    final applications = snapshot.docs
-        .map(
-          (doc) => ApplicationModel.fromFirestore(doc),
-    )
-        .toList();
+if (existingBatchId == batchId) {
+throw Exception(
+'You have already applied for this batch.',
+);
+}
 
-    // Sort locally by createdAt.
-    applications.sort((a, b) {
-      final aDate = a.createdAt;
-      final bDate = b.createdAt;
+// ------------------------------------------------------
+// DIFFERENT COURSE / BATCH
+// ------------------------------------------------------
 
-      if (aDate == null && bDate == null) {
-        return 0;
-      }
+throw Exception(
+'You already have an active application. '
+'You can apply for another course after your '
+'current application is rejected.',
+);
+}
 
-      if (aDate == null) {
-        return 1;
-      }
+// ========================================================
+// REJECTED APPLICATION
+// ========================================================
 
-      if (bDate == null) {
-        return -1;
-      }
+if (status == 'rejected') {
+print(
+'Previous application rejected. '
+'New application is allowed.',
+);
+}
 
-      return bDate.compareTo(aDate);
-    });
+// ========================================================
+// DEBUG
+// ========================================================
 
-    return applications.first;
-  }
+print(
+'Existing application: '
+'course=$existingCourseId, '
+'batch=$existingBatchId, '
+'status=$status',
+);
+}
 
-  // ============================================================
-  // GET APPLICATION BY ID
-  // ============================================================
+// ==========================================================
+// CREATE NEW APPLICATION
+// ==========================================================
 
-  Future<ApplicationModel?> getApplicationById(
-      String applicationId,
-      ) async {
-    final trimmedId = applicationId.trim();
+final docRef = _applications.doc();
 
-    if (trimmedId.isEmpty) {
-      return null;
-    }
+final application = ApplicationModel(
+id: docRef.id,
+studentId: uid,
+fullName: fullName.trim(),
+cnic: cnic.trim(),
+education: education.trim(),
+city: city.trim(),
+courseId: courseId.trim(),
+courseName: courseName.trim(),
+campusId: campusId.trim(),
+campusName: campusName.trim(),
+batchId: batchId.trim(),
+whyJoin: whyJoin.trim(),
+status: 'submitted',
+);
 
-    final doc = await _applications
-        .doc(trimmedId)
-        .get();
+await docRef.set(
+application.toFirestore(),
+);
 
-    if (!doc.exists) {
-      return null;
-    }
+// ==========================================================
+// SUCCESS LOG
+// ==========================================================
 
-    final application =
-    ApplicationModel.fromFirestore(doc);
+print('========================================');
+print('APPLICATION SUBMITTED');
+print('Application ID: ${docRef.id}');
+print('Student UID: $uid');
+print('Course ID: ${courseId.trim()}');
+print('Course Name: ${courseName.trim()}');
+print('Campus ID: ${campusId.trim()}');
+print('Batch ID: ${batchId.trim()}');
+print('Status: submitted');
+print('========================================');
 
-    if (application.studentId != _uid) {
-      throw Exception(
-        'You are not allowed to view this application.',
-      );
-    }
+return docRef.id;
+}
 
-    return application;
-  }
+// ============================================================
+// GET CURRENT STUDENT'S ACTIVE APPLICATION
+// ============================================================
+
+Future<ApplicationModel?> getMyActiveApplication() async {
+final uid = _uid;
+
+final snapshot = await _applications
+    .where(
+'studentId',
+isEqualTo: uid,
+)
+    .get();
+
+if (snapshot.docs.isEmpty) {
+return null;
+}
+
+final applications = snapshot.docs
+    .map(
+(doc) => ApplicationModel.fromFirestore(doc),
+)
+    .toList();
+
+// ==========================================================
+// ONLY ACTIVE APPLICATIONS
+// ==========================================================
+
+final activeApplications =
+applications.where((app) {
+return _isActiveStatus(app.status);
+}).toList();
+
+if (activeApplications.isEmpty) {
+return null;
+}
+
+// ==========================================================
+// SORT NEWEST FIRST
+// ==========================================================
+
+activeApplications.sort((a, b) {
+final aDate = a.createdAt;
+final bDate = b.createdAt;
+
+if (aDate == null && bDate == null) {
+return 0;
+}
+
+if (aDate == null) {
+return 1;
+}
+
+if (bDate == null) {
+return -1;
+}
+
+return bDate.compareTo(aDate);
+});
+
+return activeApplications.first;
+}
+
+// ============================================================
+// GET CURRENT STUDENT'S LATEST APPLICATION
+// ============================================================
+
+Future<ApplicationModel?> getMyApplication() async {
+final uid = _uid;
+
+final snapshot = await _applications
+    .where(
+'studentId',
+isEqualTo: uid,
+)
+    .get();
+
+if (snapshot.docs.isEmpty) {
+return null;
+}
+
+final applications = snapshot.docs
+    .map(
+(doc) => ApplicationModel.fromFirestore(doc),
+)
+    .toList();
+
+// ==========================================================
+// SORT BY CREATED DATE
+// ==========================================================
+
+applications.sort((a, b) {
+final aDate = a.createdAt;
+final bDate = b.createdAt;
+
+if (aDate == null && bDate == null) {
+return 0;
+}
+
+if (aDate == null) {
+return 1;
+}
+
+if (bDate == null) {
+return -1;
+}
+
+return bDate.compareTo(aDate);
+});
+
+return applications.first;
+}
+
+// ============================================================
+// GET APPLICATION BY ID
+// ============================================================
+
+Future<ApplicationModel?> getApplicationById(
+String applicationId,
+) async {
+final trimmedId = applicationId.trim();
+
+if (trimmedId.isEmpty) {
+return null;
+}
+
+final doc = await _applications
+    .doc(trimmedId)
+    .get();
+
+if (!doc.exists) {
+return null;
+}
+
+final application =
+ApplicationModel.fromFirestore(doc);
+
+// ==========================================================
+// SECURITY CHECK
+// ==========================================================
+
+if (application.studentId != _uid) {
+throw Exception(
+'You are not allowed to view this application.',
+);
+}
+
+return application;
+}
 }

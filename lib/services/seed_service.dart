@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -9,11 +10,8 @@ SeedService._();
 
 static final SeedService instance = SeedService._();
 
-final FirebaseFirestore _firestore =
-FirebaseFirestore.instance;
-
-final FirebaseAuth _auth =
-FirebaseAuth.instance;
+final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+final FirebaseAuth _auth = FirebaseAuth.instance;
 
 // ============================================================
 // COLLECTIONS
@@ -43,8 +41,7 @@ final user = _auth.currentUser;
 
 if (user == null) {
 throw Exception(
-'No Firebase user is logged in. '
-'Please login first and then run seed.',
+'No Firebase user is logged in. Please login first.',
 );
 }
 
@@ -55,91 +52,130 @@ print('');
 }
 
 // ============================================================
-// SEED ALL
+// SAFE DATA CHECK
 // ============================================================
 
 Future<void> seedAll() async {
 print('');
 print('==========================================');
-print('           BANO QABIL SEED');
+print('       BANO QABIL DATA CHECK');
 print('==========================================');
 
 try {
-// --------------------------------------------------------
-// AUTH
-// --------------------------------------------------------
-
-print('');
-print('Checking Firebase Authentication...');
 _checkAuthentication();
 
-// --------------------------------------------------------
-// COURSES
-// --------------------------------------------------------
-
 print('');
-print('1. Checking courses...');
+print('Checking courses...');
 await _checkCourses();
 
-// --------------------------------------------------------
-// CAMPUSES
-// --------------------------------------------------------
-
 print('');
-print('2. Checking campuses...');
+print('Checking campuses...');
 await _checkCampuses();
 
-// --------------------------------------------------------
-// BATCHES
-// --------------------------------------------------------
-
 print('');
-print('3. Checking batches...');
+print('Checking batches...');
 await _checkBatches();
 
-// --------------------------------------------------------
-// STUDENTS
-// --------------------------------------------------------
-
 print('');
-print('4. Seeding students...');
-await seedStudents();
-
-// --------------------------------------------------------
-// APPLICATIONS
-// --------------------------------------------------------
-
-print('');
-print('5. Seeding applications...');
-await seedApplications();
-
-// --------------------------------------------------------
-// SUCCESS
-// --------------------------------------------------------
+print('Checking current student profile...');
+await _checkCurrentStudent();
 
 print('');
 print('==========================================');
-print('       SEED COMPLETED SUCCESSFULLY');
+print('       DATA CHECK COMPLETED');
 print('==========================================');
 print('');
 } catch (e, stackTrace) {
 print('');
 print('==========================================');
-print('             SEED FAILED');
+print('          DATA CHECK FAILED');
 print('==========================================');
-
 print('');
 print('Error: $e');
-
 print('');
 print('StackTrace:');
 print(stackTrace);
+print('');
+
+// Safe check hai.
+// Student Home ko crash nahi karega.
+print('Data check error ignored.');
+print('');
+}
+}
+
+// ============================================================
+// CURRENT STUDENT CHECK
+// ============================================================
+
+Future<void> _checkCurrentStudent() async {
+final user = _auth.currentUser;
+
+if (user == null) {
+print('No current Firebase user.');
+return;
+}
+
+final doc = await _users.doc(user.uid).get();
+
+if (!doc.exists) {
+print(
+'Current student profile not found for UID: ${user.uid}',
+);
+return;
+}
+
+final data = doc.data() ?? {};
+
+print('');
+print('Current Student Profile');
+print('UID: ${user.uid}');
+print('Name: ${data['name'] ?? ''}');
+print('Email: ${data['email'] ?? ''}');
+print('Role: ${data['role'] ?? ''}');
+print('Course: ${data['courseId'] ?? ''}');
+print('Batch: ${data['batchId'] ?? ''}');
+print('Campus: ${data['campus'] ?? ''}');
+print('');
+}
+
+// ============================================================
+// REAL DEMO SEED
+// ============================================================
+
+Future<void> seedDemoData() async {
+print('');
+print('==========================================');
+print('       BANO QABIL DEMO SEED');
+print('==========================================');
+
+_checkAuthentication();
+
+print('');
+print('1. Checking courses...');
+await _checkCourses();
+
+print('');
+print('2. Checking campuses...');
+await _checkCampuses();
+
+print('');
+print('3. Checking batches...');
+await _checkBatches();
+
+print('');
+print('4. Seeding students...');
+await seedStudents();
+
+print('');
+print('5. Seeding applications...');
+await seedApplications();
 
 print('');
 print('==========================================');
-
-rethrow;
-}
+print('       DEMO SEED COMPLETED');
+print('==========================================');
+print('');
 }
 
 // ============================================================
@@ -152,10 +188,6 @@ _checkAuthentication();
 final WriteBatch batch = _firestore.batch();
 
 int count = 0;
-
-// ----------------------------------------------------------
-// CREATE / UPDATE STUDENT DOCUMENTS
-// ----------------------------------------------------------
 
 for (final student in StudentSeedData.students) {
 final String id = student['id'].toString();
@@ -193,10 +225,6 @@ print(
 );
 }
 
-// ----------------------------------------------------------
-// COMMIT STUDENTS
-// ----------------------------------------------------------
-
 if (count > 0) {
 await batch.commit();
 }
@@ -204,26 +232,99 @@ await batch.commit();
 print('');
 print('Students seeded successfully: $count');
 
-// ----------------------------------------------------------
-// UPDATE BATCH ENROLLMENT
-// ----------------------------------------------------------
-
-await _updateStudentBatchEnrollment();
+// IMPORTANT:
+// Enrollment ab Firestore users query se calculate nahi hoga.
+// StudentSeedData se directly calculate hoga.
+await _updateAllStudentBatchEnrollments();
 }
 
 // ============================================================
-// UPDATE STUDENT BATCH ENROLLMENT
+// UPDATE ALL STUDENT BATCH ENROLLMENTS
+//
+// IMPORTANT FIX
+//
+// Firestore users query:
+//
+// .where('role', isEqualTo: 'student')
+// .where('batchId', isEqualTo: batchId)
+//
+// remove kar di gayi hai.
+//
+// Enrollment StudentSeedData.students se calculate hoga.
+// Is se permission-denied issue nahi aayega.
 // ============================================================
 
-Future<void> _updateStudentBatchEnrollment() async {
-const String batchId = 'flutter-batch-01';
+Future<void> _updateAllStudentBatchEnrollments() async {
+print('');
+print('==========================================');
+print('    UPDATING STUDENT BATCH ENROLLMENTS');
+print('==========================================');
 
+// ----------------------------------------------------------
+// STEP 1:
+// StudentSeedData se unique batch IDs collect karein.
+// ----------------------------------------------------------
+
+final Set<String> batchIds = {};
+
+for (final student in StudentSeedData.students) {
+final String batchId =
+(student['batchId'] ?? '').toString().trim();
+
+if (batchId.isNotEmpty) {
+batchIds.add(batchId);
+}
+}
+
+if (batchIds.isEmpty) {
+print('No batchIds found in StudentSeedData.');
+print('Nothing to update.');
+return;
+}
+
+print('');
+print('Student batch IDs found:');
+
+for (final batchId in batchIds) {
+print('→ $batchId');
+}
+
+print('');
+
+// ----------------------------------------------------------
+// STEP 2:
+// Har batch ka enrollment update karein.
+// ----------------------------------------------------------
+
+for (final String batchId in batchIds) {
+await _updateSingleBatchEnrollment(batchId);
+}
+
+print('');
+print('==========================================');
+print('    BATCH ENROLLMENTS UPDATED');
+print('==========================================');
+print('');
+}
+
+// ============================================================
+// UPDATE SINGLE BATCH ENROLLMENT
+// ============================================================
+
+Future<void> _updateSingleBatchEnrollment(
+String batchId,
+) async {
 print('');
 print('Updating batch enrollment...');
 print('Batch: $batchId');
 
 final DocumentReference<Map<String, dynamic>> batchRef =
 _batches.doc(batchId);
+
+// ----------------------------------------------------------
+// STEP 1:
+// Batch Firebase se read karein.
+// ----------------------------------------------------------
 
 final DocumentSnapshot<Map<String, dynamic>> batchSnapshot =
 await batchRef.get();
@@ -232,27 +333,43 @@ if (!batchSnapshot.exists) {
 print(
 'WARNING: Batch $batchId was not found.',
 );
-
 return;
 }
 
 final Map<String, dynamic> batchData =
 batchSnapshot.data() ?? {};
 
+// ----------------------------------------------------------
+// STEP 2:
+// Total seats read karein.
+// ----------------------------------------------------------
+
 final int seats = _toInt(batchData['seats']);
 
 // ----------------------------------------------------------
-// Count students belonging to this batch
+// STEP 3:
+// StudentSeedData se enrolled students count karein.
+//
+// Example:
+// 12 students have batchId flutter-batch-01
+// therefore enrolledStudents = 12
 // ----------------------------------------------------------
 
-final QuerySnapshot<Map<String, dynamic>> studentSnapshot =
-await _users
-    .where('role', isEqualTo: 'student')
-    .where('batchId', isEqualTo: batchId)
-    .get();
+int enrolledStudents = 0;
 
-final int enrolledStudents =
-studentSnapshot.docs.length;
+for (final student in StudentSeedData.students) {
+final String studentBatchId =
+(student['batchId'] ?? '').toString().trim();
+
+if (studentBatchId == batchId) {
+enrolledStudents++;
+}
+}
+
+// ----------------------------------------------------------
+// STEP 4:
+// Seats left calculate karein.
+// ----------------------------------------------------------
 
 final int seatsLeft =
 seats > enrolledStudents
@@ -260,7 +377,8 @@ seats > enrolledStudents
     : 0;
 
 // ----------------------------------------------------------
-// Update batch
+// STEP 5:
+// Firebase batch update karein.
 // ----------------------------------------------------------
 
 await batchRef.set(
@@ -270,6 +388,10 @@ await batchRef.set(
 },
 SetOptions(merge: true),
 );
+
+// ----------------------------------------------------------
+// RESULT
+// ----------------------------------------------------------
 
 print('');
 print('==========================================');
@@ -374,8 +496,7 @@ return;
 }
 
 for (final doc in snapshot.docs) {
-final Map<String, dynamic> data =
-doc.data();
+final Map<String, dynamic> data = doc.data();
 
 final dynamic title =
 data['title'] ??
@@ -413,8 +534,7 @@ return;
 }
 
 for (final doc in snapshot.docs) {
-final Map<String, dynamic> data =
-doc.data();
+final Map<String, dynamic> data = doc.data();
 
 final dynamic name =
 data['name'] ?? 'Unknown Campus';
@@ -454,8 +574,7 @@ return;
 }
 
 for (final doc in snapshot.docs) {
-final Map<String, dynamic> data =
-doc.data();
+final Map<String, dynamic> data = doc.data();
 
 final dynamic courseId =
 data['courseId'] ?? '';
@@ -577,11 +696,9 @@ print(
 'Demo students deleted: $count',
 );
 
-// ----------------------------------------------------------
-// Recalculate batch after deleting students
-// ----------------------------------------------------------
-
-await _updateStudentBatchEnrollment();
+// Firebase users query use nahi hogi.
+// Seed data ke batch IDs se enrollment recalculate hoga.
+await _updateAllStudentBatchEnrollments();
 }
 
 // ============================================================
@@ -654,4 +771,5 @@ rethrow;
 }
 }
 }
+
 

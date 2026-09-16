@@ -1,11 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../app/theme/app_dimensions.dart';
-import '../../../app/theme/app_text_styles.dart';
-import '../../../models/user_model.dart';
-import '../../../services/auth_service.dart';
 
 class InstructorHomeScreen extends StatefulWidget {
   const InstructorHomeScreen({super.key});
@@ -17,100 +15,232 @@ class InstructorHomeScreen extends StatefulWidget {
 
 class _InstructorHomeScreenState
     extends State<InstructorHomeScreen> {
-  int _selectedIndex = 0;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance;
+
+  final FirebaseAuth _auth =
+      FirebaseAuth.instance;
+
+  bool _isLoading = true;
 
   String _instructorName = 'Instructor';
+  String _courseName = 'Course';
+  String _batchName = 'Batch';
+
+  int _studentCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadInstructorProfile();
+    _loadInstructorData();
   }
 
   // ============================================================
-  // LOAD INSTRUCTOR PROFILE
+  // LOAD INSTRUCTOR DATA
   // ============================================================
 
-  Future<void> _loadInstructorProfile() async {
+  Future<void> _loadInstructorData() async {
     try {
-      final UserModel? profile =
-      await AuthService.instance.getCurrentUserProfile();
+      final user = _auth.currentUser;
 
-      if (!mounted || profile == null) {
-        return;
+      if (user == null) {
+        throw Exception('Instructor is not logged in.');
       }
 
-      final name = profile.name.trim();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-      if (name.isEmpty) {
-        return;
+      if (!userDoc.exists || userDoc.data() == null) {
+        throw Exception(
+          'Instructor profile was not found.',
+        );
       }
+
+      final userData = userDoc.data()!;
+
+      final name =
+      (userData['name'] ?? 'Instructor').toString();
+
+      final courseId =
+      (userData['courseId'] ?? '').toString();
+
+      final batchId =
+      (userData['batchId'] ?? '').toString();
+
+      String courseName = 'Course';
+      String batchName = 'Batch';
+      int studentCount = 0;
+
+      // ----------------------------------------------------------
+      // COURSE
+      // ----------------------------------------------------------
+
+      if (courseId.isNotEmpty) {
+        final courseDoc = await _firestore
+            .collection('courses')
+            .doc(courseId)
+            .get();
+
+        if (courseDoc.exists &&
+            courseDoc.data() != null) {
+          final courseData = courseDoc.data()!;
+
+          courseName =
+              (courseData['title'] ??
+                  courseData['name'] ??
+                  courseId)
+                  .toString();
+        }
+      }
+
+      // ----------------------------------------------------------
+      // BATCH
+      // ----------------------------------------------------------
+
+      if (batchId.isNotEmpty) {
+        final batchDoc = await _firestore
+            .collection('batches')
+            .doc(batchId)
+            .get();
+
+        if (batchDoc.exists &&
+            batchDoc.data() != null) {
+          final batchData = batchDoc.data()!;
+
+          batchName =
+              (batchData['name'] ??
+                  batchData['title'] ??
+                  batchId)
+                  .toString();
+
+          studentCount =
+              _getStudentCount(batchData);
+        }
+      }
+
+      if (!mounted) return;
 
       setState(() {
         _instructorName = name;
+        _courseName = courseName;
+        _batchName = batchName;
+        _studentCount = studentCount;
+        _isLoading = false;
       });
     } catch (e) {
-      // Keep default instructor name.
+      debugPrint(
+        'Instructor dashboard error: $e',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      _showError(
+        'Unable to load instructor data.',
+      );
     }
   }
 
   // ============================================================
-  // GET TODAY'S CLASSES
+  // STUDENT COUNT
   // ============================================================
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _getTodayClasses() {
-    final user = AuthService.instance.currentUser;
+  int _getStudentCount(
+      Map<String, dynamic> batchData,
+      ) {
+    final enrolled =
+    batchData['enrolledStudents'];
 
-    if (user == null) {
-      return const Stream.empty();
+    if (enrolled is int) {
+      return enrolled;
     }
 
-    return FirebaseFirestore.instance
-        .collection('batches')
-        .where(
-      'instructorId',
-      isEqualTo: user.uid,
-    )
-        .where(
-      'status',
-      isEqualTo: 'active',
-    )
-        .snapshots();
+    if (enrolled is num) {
+      return enrolled.toInt();
+    }
+
+    return 0;
   }
 
   // ============================================================
-  // DEMO PENDING SUBMISSIONS
+  // LOGOUT
   // ============================================================
 
-  final List<Map<String, dynamic>> _pendingSubmissions = [
-    {
-      'student': 'Ali Raza',
-      'assignment': 'Flutter UI Assignment',
-      'batch': 'Flutter Batch 01',
-    },
-    {
-      'student': 'Sara Ahmed',
-      'assignment': 'Firebase Quiz',
-      'batch': 'Flutter Batch 01',
-    },
-  ];
+  Future<void> _logout() async {
+    await _auth.signOut();
+
+    if (!mounted) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login',
+          (route) => false,
+    );
+  }
 
   // ============================================================
-  // DEMO STUDENTS BEHIND
+  // ERROR
   // ============================================================
 
-  final List<Map<String, dynamic>> _behindStudents = [
-    {
-      'student': 'Ahmed Khan',
-      'batch': 'Flutter Batch 01',
-      'progress': '45%',
-    },
-    {
-      'student': 'Fatima Noor',
-      'batch': 'Flutter Batch 01',
-      'progress': '52%',
-    },
-  ];
+  void _showError(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ============================================================
+  // OPEN ATTENDANCE
+  // ============================================================
+
+  void _openAttendance() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.instructorAttendance,
+    );
+  }
+
+  // ============================================================
+  // OPEN STUDENTS
+  // ============================================================
+
+  void _openStudents() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.instructorStudents,
+    );
+  }
+
+  // ============================================================
+  // OPEN ASSIGNMENTS
+  // ============================================================
+
+  void _openAssignments() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.instructorAssignments,
+    );
+  }
+
+  // ============================================================
+  // OPEN MARKS
+  // ============================================================
+
+  void _openMarks() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.instructorMarks,
+    );
+  }
 
   // ============================================================
   // BUILD
@@ -119,299 +249,83 @@ class _InstructorHomeScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:
+      const Color(0xFFF6F8FC),
+
       appBar: AppBar(
         title: const Text(
           'Instructor Dashboard',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
         ),
+        centerTitle: false,
         actions: [
           IconButton(
-            onPressed: () {},
+            tooltip: 'Logout',
+            onPressed: _logout,
             icon: const Icon(
-              Icons.notifications_none_rounded,
+              Icons.logout_rounded,
             ),
-          ),
-          const SizedBox(
-            width: AppDimensions.paddingSmall,
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          _buildDashboard(),
-          _buildPlaceholder('Classes'),
-          _buildPlaceholder('Assignments'),
-          _buildPlaceholder('Profile'),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(
-              Icons.dashboard_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.dashboard_rounded,
-            ),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(
-              Icons.groups_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.groups_rounded,
-            ),
-            label: 'Classes',
-          ),
-          NavigationDestination(
-            icon: Icon(
-              Icons.assignment_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.assignment_rounded,
-            ),
-            label: 'Work',
-          ),
-          NavigationDestination(
-            icon: Icon(
-              Icons.person_outline_rounded,
-            ),
-            selectedIcon: Icon(
-              Icons.person_rounded,
-            ),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
-  }
 
-  // ============================================================
-  // DASHBOARD
-  // ============================================================
+      body: _isLoading
+          ? const Center(
+        child: CircularProgressIndicator(),
+      )
+          : RefreshIndicator(
+        onRefresh: _loadInstructorData,
+        child: ListView(
+          physics:
+          const AlwaysScrollableScrollPhysics(),
+          padding:
+          const EdgeInsets.all(20),
+          children: [
+            _buildWelcomeCard(),
 
-  Widget _buildDashboard() {
-    return RefreshIndicator(
-      onRefresh: _loadInstructorProfile,
-      child: ListView(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(
-          AppDimensions.paddingMedium,
+            const SizedBox(height: 20),
+
+            _buildSectionTitle(
+              'Your Teaching Overview',
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildStatsGrid(),
+
+            const SizedBox(height: 24),
+
+            _buildSectionTitle(
+              'Quick Actions',
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildQuickActions(),
+
+            const SizedBox(height: 24),
+
+            _buildSectionTitle(
+              'Assigned Batch',
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildBatchCard(),
+
+            const SizedBox(height: 24),
+
+            _buildSectionTitle(
+              'Upcoming Class',
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildUpcomingClass(),
+          ],
         ),
-        children: [
-          _buildWelcomeCard(),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
-
-          _buildSectionHeader(
-            title: "Today's Classes",
-            actionText: 'View All',
-            onActionPressed: () {},
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
-          ),
-
-          StreamBuilder<
-              QuerySnapshot<Map<String, dynamic>>>(
-            stream: _getTodayClasses(),
-            builder: (
-                context,
-                snapshot,
-                ) {
-              if (snapshot.connectionState ==
-                  ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical:
-                    AppDimensions.paddingLarge,
-                  ),
-                  child: Center(
-                    child:
-                    CircularProgressIndicator(),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingMedium,
-                    ),
-                    child: Text(
-                      'Unable to load classes.',
-                      style:
-                      AppTextStyles.bodyMedium,
-                    ),
-                  ),
-                );
-              }
-
-              final batches =
-                  snapshot.data?.docs ?? [];
-
-              if (batches.isEmpty) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingLarge,
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.class_outlined,
-                          size: AppDimensions
-                              .iconXLarge,
-                          color:
-                          AppColors.textLight,
-                        ),
-                        const SizedBox(
-                          height: AppDimensions
-                              .spacingSmall,
-                        ),
-                        Text(
-                          'No classes found for today.',
-                          style: AppTextStyles
-                              .bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return Column(
-                children:
-                batches.map((doc) {
-                  final data = doc.data();
-
-                  final studentIds =
-                      (data['studentIds']
-                      as List<dynamic>?) ??
-                          [];
-
-                  final courseId =
-                  (data['courseId'] ?? '')
-                      .toString();
-
-                  return FutureBuilder<
-                      DocumentSnapshot<
-                          Map<String, dynamic>>>(
-                    future: courseId.isEmpty
-                        ? null
-                        : FirebaseFirestore
-                        .instance
-                        .collection('courses')
-                        .doc(courseId)
-                        .get(),
-                    builder: (
-                        context,
-                        courseSnapshot,
-                        ) {
-                      String courseName =
-                          'Course';
-
-                      if (courseSnapshot
-                          .hasData &&
-                          courseSnapshot
-                              .data!.exists) {
-                        final courseData =
-                        courseSnapshot.data!
-                            .data();
-
-                        courseName =
-                            (courseData?['name'] ??
-                                'Course')
-                                .toString();
-                      }
-
-                      return _buildClassCard({
-                        'batch':
-                        (data['name'] ??
-                            'Unnamed Batch')
-                            .toString(),
-                        'course': courseName,
-                        'time':
-                        'Schedule not available',
-                        'students':
-                        studentIds.length,
-                      });
-                    },
-                  );
-                }).toList(),
-              );
-            },
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
-
-          _buildSectionHeader(
-            title: 'Quick Actions',
-            actionText: '',
-            onActionPressed: () {},
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
-          ),
-
-          _buildQuickActions(),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
-
-          _buildSectionHeader(
-            title: 'Pending Submissions',
-            actionText: 'View All',
-            onActionPressed: () {},
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
-          ),
-
-          ..._pendingSubmissions.map(
-            _buildSubmissionCard,
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
-
-          _buildSectionHeader(
-            title:
-            'Students Behind on Work',
-            actionText: 'View Progress',
-            onActionPressed: () {},
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingMedium,
-          ),
-
-          ..._behindStudents.map(
-            _buildProgressCard,
-          ),
-
-          const SizedBox(
-            height: AppDimensions.spacingLarge,
-          ),
-        ],
       ),
     );
   }
@@ -422,72 +336,74 @@ class _InstructorHomeScreenState
 
   Widget _buildWelcomeCard() {
     return Container(
-      padding: const EdgeInsets.all(
-        AppDimensions.paddingLarge,
-      ),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
+        borderRadius:
+        BorderRadius.circular(20),
         gradient: const LinearGradient(
           colors: [
-            AppColors.banoQabilGreen,
-            AppColors.banoQabilTeal,
+            Color(0xFF54C015),
+            Color(0xFF84F542),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(
-          AppDimensions.radiusXLarge,
         ),
       ),
       child: Row(
         children: [
           Container(
-            width: AppDimensions.avatarLarge,
-            height: AppDimensions.avatarLarge,
+            width: 58,
+            height: 58,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(
-                alpha: 0.18,
-              ),
+              color:
+              Colors.white.withOpacity(0.18),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.school_rounded,
               color: Colors.white,
-              size: AppDimensions.iconLarge,
+              size: 30,
             ),
           ),
-          const SizedBox(
-            width: AppDimensions.spacingMedium,
-          ),
+
+          const SizedBox(width: 16),
+
           Expanded(
             child: Column(
               crossAxisAlignment:
               CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Welcome back!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight:
-                    FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _instructorName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight:
-                    FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Manage your classes and students',
+                  'Welcome back 👋',
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 13,
+                    fontSize: 14,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  _instructorName,
+                  maxLines: 1,
+                  overflow:
+                  TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight:
+                    FontWeight.w800,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  _courseName,
+                  maxLines: 1,
+                  overflow:
+                  TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
                   ),
                 ),
               ],
@@ -499,125 +415,109 @@ class _InstructorHomeScreenState
   }
 
   // ============================================================
-  // SECTION HEADER
+  // SECTION TITLE
   // ============================================================
 
-  Widget _buildSectionHeader({
-    required String title,
-    required String actionText,
-    required VoidCallback onActionPressed,
-  }) {
-    return Row(
-      mainAxisAlignment:
-      MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.heading3,
-        ),
-        if (actionText.isNotEmpty)
-          TextButton(
-            onPressed: onActionPressed,
-            child: Text(actionText),
-          ),
-      ],
+  Widget _buildSectionTitle(
+      String title,
+      ) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF172033),
+      ),
     );
   }
 
   // ============================================================
-  // CLASS CARD
+  // STATS
   // ============================================================
 
-  Widget _buildClassCard(
-      Map<String, dynamic> classData,
-      ) {
-    return Card(
-      margin: const EdgeInsets.only(
-        bottom: AppDimensions.spacingSmall,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(
-          AppDimensions.paddingMedium,
+  Widget _buildStatsGrid() {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics:
+      const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.45,
+      children: [
+        _buildStatCard(
+          icon: Icons.people_alt_rounded,
+          title: 'Students',
+          value: _studentCount.toString(),
         ),
-        child: Row(
+
+        _buildStatCard(
+          icon: Icons.menu_book_rounded,
+          title: 'Course',
+          value: '1',
+        ),
+
+        _buildStatCard(
+          icon: Icons.groups_rounded,
+          title: 'Batch',
+          value: _batchName
+              .replaceAll('batch', '')
+              .trim(),
+        ),
+
+        _buildStatCard(
+          icon: Icons.calendar_month_rounded,
+          title: 'Classes',
+          value: '3 / week',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding:
+        const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.accentLight,
-                borderRadius:
-                BorderRadius.circular(
-                  AppDimensions.radiusMedium,
-                ),
+            Icon(
+              icon,
+              color:
+              const Color(0xFF1565C0),
+              size: 25,
+            ),
+
+            const Spacer(),
+
+            Text(
+              value,
+              maxLines: 1,
+              overflow:
+              TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight:
+                FontWeight.w800,
               ),
-              child: const Icon(
-                Icons.class_rounded,
+            ),
+
+            const SizedBox(height: 3),
+
+            Text(
+              title,
+              style: const TextStyle(
                 color:
-                AppColors.banoQabilGreen,
+                Color(0xFF697386),
+                fontSize: 12,
               ),
-            ),
-            const SizedBox(
-              width: AppDimensions.spacingMedium,
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    classData['batch'].toString(),
-                    style:
-                    AppTextStyles.cardTitle,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    classData['course'].toString(),
-                    style:
-                    AppTextStyles.cardSubtitle,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons
-                            .access_time_rounded,
-                        size: AppDimensions
-                            .iconSmall,
-                        color: AppColors
-                            .textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          classData['time']
-                              .toString(),
-                          style: AppTextStyles
-                              .bodySmall,
-                        ),
-                      ),
-                      const Icon(
-                        Icons
-                            .people_outline_rounded,
-                        size: AppDimensions
-                            .iconSmall,
-                        color: AppColors
-                            .textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${classData['students']} students',
-                        style: AppTextStyles
-                            .bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textLight,
             ),
           ],
         ),
@@ -630,31 +530,64 @@ class _InstructorHomeScreenState
   // ============================================================
 
   Widget _buildQuickActions() {
-    return GridView.count(
-      crossAxisCount: 3,
-      crossAxisSpacing:
-      AppDimensions.spacingSmall,
-      mainAxisSpacing:
-      AppDimensions.spacingSmall,
-      childAspectRatio: 0.95,
-      shrinkWrap: true,
-      physics:
-      const NeverScrollableScrollPhysics(),
+    return Column(
       children: [
-        _buildActionCard(
-          icon: Icons.fact_check_outlined,
-          title: 'Attendance',
-          onTap: () {},
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                icon:
+                Icons.fact_check_rounded,
+                title: 'Attendance',
+                subtitle:
+                'Mark attendance',
+                onTap: _openAttendance,
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: _buildActionCard(
+                icon:
+                Icons.people_alt_rounded,
+                title: 'Students',
+                subtitle:
+                'View students',
+                onTap: _openStudents,
+              ),
+            ),
+          ],
         ),
-        _buildActionCard(
-          icon: Icons.add_task_rounded,
-          title: 'Assignment',
-          onTap: () {},
-        ),
-        _buildActionCard(
-          icon: Icons.campaign_outlined,
-          title: 'Notice',
-          onTap: () {},
+
+        const SizedBox(height: 12),
+
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                icon:
+                Icons.assignment_rounded,
+                title: 'Assignments',
+                subtitle:
+                'Manage work',
+                onTap: _openAssignments,
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: _buildActionCard(
+                icon:
+                Icons.grade_rounded,
+                title: 'Marks',
+                subtitle:
+                'Marks & feedback',
+                onTap: _openMarks,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -663,46 +596,61 @@ class _InstructorHomeScreenState
   Widget _buildActionCard({
     required IconData icon,
     required String title,
+    required String subtitle,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(
-        AppDimensions.radiusLarge,
-      ),
-      child: Card(
+    return Card(
+      elevation: 0,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius:
+        BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(
-            AppDimensions.paddingSmall,
-          ),
+          padding:
+          const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment:
-            MainAxisAlignment.center,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color:
-                  AppColors.accentLight,
+                  color: const Color(
+                    0xFFE8F1FF,
+                  ),
                   borderRadius:
                   BorderRadius.circular(
-                    AppDimensions.radiusMedium,
+                    14,
                   ),
                 ),
                 child: Icon(
                   icon,
                   color:
-                  AppColors.banoQabilGreen,
+                  const Color(0xFF6DC015),
                 ),
               ),
-              const SizedBox(height: 8),
+
+              const SizedBox(height: 12),
+
               Text(
                 title,
-                textAlign:
-                TextAlign.center,
-                style: AppTextStyles
-                    .labelMedium,
+                style: const TextStyle(
+                  fontWeight:
+                  FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+
+              const SizedBox(height: 3),
+
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color:
+                  Color(0xFF697386),
+                ),
               ),
             ],
           ),
@@ -712,129 +660,70 @@ class _InstructorHomeScreenState
   }
 
   // ============================================================
-  // SUBMISSION CARD
+  // BATCH CARD
   // ============================================================
 
-  Widget _buildSubmissionCard(
-      Map<String, dynamic> submission,
-      ) {
+  Widget _buildBatchCard() {
     return Card(
-      margin: const EdgeInsets.only(
-        bottom: AppDimensions.spacingSmall,
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor:
-          AppColors.accentLight,
-          child: const Icon(
-            Icons.assignment_outlined,
-            color:
-            AppColors.banoQabilGreen,
-          ),
-        ),
-        title: Text(
-          submission['student'].toString(),
-          style:
-          AppTextStyles.cardTitle,
-        ),
-        subtitle: Text(
-          '${submission['assignment']} • '
-              '${submission['batch']}',
-          style:
-          AppTextStyles.cardSubtitle,
-        ),
-        trailing: const Icon(
-          Icons.chevron_right_rounded,
-          color: AppColors.textLight,
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // PROGRESS CARD
-  // ============================================================
-
-  Widget _buildProgressCard(
-      Map<String, dynamic> student,
-      ) {
-    final progressText =
-    student['progress'].toString();
-
-    final progress =
-        double.tryParse(
-          progressText.replaceAll(
-            '%',
-            '',
-          ),
-        ) ??
-            0;
-
-    return Card(
-      margin: const EdgeInsets.only(
-        bottom: AppDimensions.spacingSmall,
-      ),
+      elevation: 0,
       child: Padding(
-        padding: const EdgeInsets.all(
-          AppDimensions.paddingMedium,
-        ),
+        padding:
+        const EdgeInsets.all(18),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor:
-              AppColors.errorBackground,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color:
+                const Color(0xFFE8F1FF),
+                borderRadius:
+                BorderRadius.circular(
+                  15,
+                ),
+              ),
               child: const Icon(
-                Icons
-                    .person_outline_rounded,
-                color: AppColors.error,
+                Icons.groups_rounded,
+                color:
+                Color(0xFF1BC015),
               ),
             ),
-            const SizedBox(
-              width:
-              AppDimensions.spacingMedium,
-            ),
+
+            const SizedBox(width: 14),
+
             Expanded(
               child: Column(
                 crossAxisAlignment:
                 CrossAxisAlignment.start,
                 children: [
                   Text(
-                    student['student']
-                        .toString(),
+                    _batchName,
                     style:
-                    AppTextStyles.cardTitle,
+                    const TextStyle(
+                      fontSize: 16,
+                      fontWeight:
+                      FontWeight.w700,
+                    ),
                   ),
-                  const SizedBox(height: 3),
+
+                  const SizedBox(height: 5),
+
                   Text(
-                    student['batch']
-                        .toString(),
+                    _courseName,
                     style:
-                    AppTextStyles.cardSubtitle,
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: (progress / 100)
-                        .clamp(0.0, 1.0),
-                    minHeight: 6,
-                    borderRadius:
-                    BorderRadius.circular(
-                      10,
+                    const TextStyle(
+                      color:
+                      Color(0xFF697386),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(
-              width:
-              AppDimensions.spacingMedium,
-            ),
-            Text(
-              progressText,
-              style: AppTextStyles
-                  .labelLarge
-                  .copyWith(
-                color: AppColors.error,
-              ),
+
+            const Icon(
+              Icons.chevron_right_rounded,
+              color:
+              Color(0xFF9AA3B2),
             ),
           ],
         ),
@@ -843,16 +732,110 @@ class _InstructorHomeScreenState
   }
 
   // ============================================================
-  // PLACEHOLDER
+  // UPCOMING CLASS
   // ============================================================
 
-  Widget _buildPlaceholder(
-      String title,
-      ) {
-    return Center(
-      child: Text(
-        title,
-        style: AppTextStyles.heading2,
+  Widget _buildUpcomingClass() {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding:
+        const EdgeInsets.all(18),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color:
+                    const Color(
+                      0xFFE8F1FF,
+                    ),
+                    borderRadius:
+                    BorderRadius.circular(
+                      14,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_today_rounded,
+                    color:
+                    AppColors.primary,
+                  ),
+                ),
+
+                const SizedBox(width: 14),
+
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Next Class',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color:
+                          Color(0xFF697386),
+                        ),
+                      ),
+
+                      SizedBox(height: 4),
+
+                      Text(
+                        'Monday • 5:00 PM',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight:
+                          FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            const Divider(),
+
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                const Icon(
+                  Icons.room_rounded,
+                  size: 20,
+                  color:
+                  Color(0xFF697386),
+                ),
+
+                const SizedBox(width: 8),
+
+                const Text(
+                  'Lab 1',
+                  style: TextStyle(
+                    fontWeight:
+                    FontWeight.w600,
+                  ),
+                ),
+
+                const Spacer(),
+
+                Text(
+                  _batchName,
+                  style: const TextStyle(
+                    color:
+                    Color(0xFF697386),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

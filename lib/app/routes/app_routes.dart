@@ -13,6 +13,7 @@ import '../../features/auth/screens/splash_screen.dart';
 // STUDENT
 // ============================================================
 
+import '../../features/instructor/screens/instrctor_shell.dart';
 import '../../features/student/applications/screen/my_application_screen.dart';
 import '../../features/student/student_shell.dart';
 import '../../features/student/class/screen/my_classes_screen.dart';
@@ -20,13 +21,14 @@ import '../../features/student/class/screen/my_classes_screen.dart';
 // ============================================================
 // INSTRUCTOR
 // ============================================================
-
-import '../../features/instructor/screens/instructor_home_screen.dart';
+import '../../features/instructor/screens/instructor_attendance_screen.dart';
+import '../../features/instructor/screens/instructor_students_screen.dart';
+import '../../features/instructor/screens/instructor_assignments_screen.dart';
+import '../../features/instructor/screens/instructor_marks_screen.dart';
 
 // ============================================================
 // SEED DATA
 // ============================================================
-
 
 class AppRoutes {
   AppRoutes._();
@@ -40,36 +42,46 @@ class AppRoutes {
   static const String register = '/register';
 
   // ------------------------------------------------------------
-  // Student
+  // STUDENT
   // ------------------------------------------------------------
 
   static const String studentHome = '/student-home';
 
   static const String myClasses = '/my-classes';
 
-  static const String myApplication =
-      '/my-application';
+  static const String myApplication = '/my-application';
 
   // ------------------------------------------------------------
-  // Instructor
+  // INSTRUCTOR
   // ------------------------------------------------------------
 
   static const String instructorHome =
       '/instructor-home';
 
+  static const String instructorAttendance =
+      '/instructor-attendance';
+
+  static const String instructorStudents =
+      '/instructor-students';
+
+  static const String instructorAssignments =
+      '/instructor-assignments';
+
+  static const String instructorMarks =
+      '/instructor-marks';
+
   // ------------------------------------------------------------
-  // Coordinator
+  // COORDINATOR
   // ------------------------------------------------------------
 
   static const String coordinatorDashboard =
       '/coordinator-dashboard';
 
   // ------------------------------------------------------------
-  // Seed Data
+  // SEED DATA
   // ------------------------------------------------------------
 
-  static const String seedData =
-      '/seed-data';
+  static const String seedData = '/seed-data';
 
   // ============================================================
   // ROUTES
@@ -107,8 +119,27 @@ class AppRoutes {
       // INSTRUCTOR
       // ========================================================
 
+      // IMPORTANT:
+      // Instructor ab direct HomeScreen ke bajaye
+      // InstructorShell se open hoga.
+
       instructorHome: (context) =>
-      const InstructorHomeScreen(),
+      const InstructorShell(),
+
+      // Individual screens ko routes mein rehne dein.
+      // Ye existing navigation/quick actions ke liye useful hain.
+
+      instructorAttendance: (context) =>
+      const InstructorAttendanceScreen(),
+
+      instructorStudents: (context) =>
+      const InstructorStudentsScreen(),
+
+      instructorAssignments: (context) =>
+      const InstructorAssignmentsScreen(),
+
+      instructorMarks: (context) =>
+      const InstructorMarksScreen(),
 
       // ========================================================
       // COORDINATOR

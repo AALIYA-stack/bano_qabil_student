@@ -27,7 +27,7 @@ class SubmissionService {
   // CURRENT USER
   // ============================================================
 
-  User get _currentUser {
+  User get currentUser {
     final User? user = _auth.currentUser;
 
     if (user == null) {
@@ -40,7 +40,7 @@ class SubmissionService {
   }
 
   String get _uid {
-    return _currentUser.uid;
+    return currentUser.uid;
   }
 
   // ============================================================
@@ -55,7 +55,7 @@ class SubmissionService {
   }
 
   // ============================================================
-  // GET ONE SUBMISSION
+  // GET ONE SUBMISSION - STUDENT
   // ============================================================
 
   Future<SubmissionModel?> getMySubmission(
@@ -91,7 +91,7 @@ class SubmissionService {
   }
 
   // ============================================================
-  // GET ALL MY SUBMISSIONS
+  // GET ALL MY SUBMISSIONS - STUDENT
   // ============================================================
 
   Future<List<SubmissionModel>>
@@ -104,8 +104,8 @@ class SubmissionService {
     )
         .get();
 
-    final List<SubmissionModel> submissions =
-    snapshot.docs
+    final List<SubmissionModel>
+    submissions = snapshot.docs
         .map(
           (doc) =>
           SubmissionModel.fromFirestore(doc),
@@ -141,6 +141,468 @@ class SubmissionService {
   }
 
   // ============================================================
+  // GET SUBMISSIONS FOR BATCH - INSTRUCTOR
+  // ============================================================
+
+  Future<List<SubmissionModel>>
+  getSubmissionsForBatch(
+      String batchId,
+      ) async {
+    final String trimmedBatchId =
+    batchId.trim();
+
+    if (trimmedBatchId.isEmpty) {
+      return <SubmissionModel>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>>
+    snapshot = await _submissions
+        .where(
+      'batchId',
+      isEqualTo: trimmedBatchId,
+    )
+        .get();
+
+    final List<SubmissionModel>
+    submissions = snapshot.docs
+        .map(
+          (doc) =>
+          SubmissionModel.fromFirestore(doc),
+    )
+        .toList();
+
+    submissions.sort(
+          (a, b) {
+        final DateTime? aDate =
+            a.submittedAt;
+
+        final DateTime? bDate =
+            b.submittedAt;
+
+        if (aDate == null &&
+            bDate == null) {
+          return 0;
+        }
+
+        if (aDate == null) {
+          return 1;
+        }
+
+        if (bDate == null) {
+          return -1;
+        }
+
+        return bDate.compareTo(aDate);
+      },
+    );
+
+    return submissions;
+  }
+
+  // ============================================================
+  // GET SUBMISSIONS FOR ASSIGNMENT - INSTRUCTOR
+  // ============================================================
+
+  Future<List<SubmissionModel>>
+  getSubmissionsForAssignment(
+      String assignmentId,
+      ) async {
+    final String trimmedAssignmentId =
+    assignmentId.trim();
+
+    if (trimmedAssignmentId.isEmpty) {
+      return <SubmissionModel>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>>
+    snapshot = await _submissions
+        .where(
+      'assignmentId',
+      isEqualTo: trimmedAssignmentId,
+    )
+        .get();
+
+    final List<SubmissionModel>
+    submissions = snapshot.docs
+        .map(
+          (doc) =>
+          SubmissionModel.fromFirestore(doc),
+    )
+        .toList();
+
+    submissions.sort(
+          (a, b) {
+        final DateTime? aDate =
+            a.submittedAt;
+
+        final DateTime? bDate =
+            b.submittedAt;
+
+        if (aDate == null &&
+            bDate == null) {
+          return 0;
+        }
+
+        if (aDate == null) {
+          return 1;
+        }
+
+        if (bDate == null) {
+          return -1;
+        }
+
+        return bDate.compareTo(aDate);
+      },
+    );
+
+    return submissions;
+  }
+
+  // ============================================================
+  // GET ONE SUBMISSION BY ID - INSTRUCTOR
+  // ============================================================
+
+  Future<SubmissionModel?>
+  getSubmissionById(
+      String submissionId,
+      ) async {
+    final String trimmedId =
+    submissionId.trim();
+
+    if (trimmedId.isEmpty) {
+      return null;
+    }
+
+    final DocumentSnapshot<
+        Map<String, dynamic>>
+    doc = await _submissions
+        .doc(trimmedId)
+        .get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    return SubmissionModel.fromFirestore(
+      doc,
+    );
+  }
+
+  // ============================================================
+  // GET STUDENT SUBMISSIONS - INSTRUCTOR
+  // ============================================================
+
+  Future<List<SubmissionModel>>
+  getSubmissionsForStudent(
+      String studentId,
+      ) async {
+    final String trimmedStudentId =
+    studentId.trim();
+
+    if (trimmedStudentId.isEmpty) {
+      return <SubmissionModel>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>>
+    snapshot = await _submissions
+        .where(
+      'studentId',
+      isEqualTo: trimmedStudentId,
+    )
+        .get();
+
+    final List<SubmissionModel>
+    submissions = snapshot.docs
+        .map(
+          (doc) =>
+          SubmissionModel.fromFirestore(doc),
+    )
+        .toList();
+
+    submissions.sort(
+          (a, b) {
+        final DateTime? aDate =
+            a.submittedAt;
+
+        final DateTime? bDate =
+            b.submittedAt;
+
+        if (aDate == null &&
+            bDate == null) {
+          return 0;
+        }
+
+        if (aDate == null) {
+          return 1;
+        }
+
+        if (bDate == null) {
+          return -1;
+        }
+
+        return bDate.compareTo(aDate);
+      },
+    );
+
+    return submissions;
+  }
+
+  // ============================================================
+  // MARK SUBMISSION - INSTRUCTOR
+  // ============================================================
+
+  Future<void> markSubmission({
+    required String submissionId,
+    required int marks,
+    required String feedback,
+  }) async {
+    final String trimmedSubmissionId =
+    submissionId.trim();
+
+    if (trimmedSubmissionId.isEmpty) {
+      throw Exception(
+        'Invalid submission.',
+      );
+    }
+
+    if (marks < 0) {
+      throw Exception(
+        'Marks cannot be negative.',
+      );
+    }
+
+    final DocumentReference<
+        Map<String, dynamic>>
+    submissionRef =
+    _submissions.doc(
+      trimmedSubmissionId,
+    );
+
+    final DocumentSnapshot<
+        Map<String, dynamic>>
+    submissionSnapshot =
+    await submissionRef.get();
+
+    if (!submissionSnapshot.exists) {
+      throw Exception(
+        'Submission not found.',
+      );
+    }
+
+    final Map<String, dynamic> data =
+        submissionSnapshot.data() ??
+            <String, dynamic>{};
+
+    final String assignmentId =
+        data['assignmentId']?.toString() ?? '';
+
+    if (assignmentId.isEmpty) {
+      throw Exception(
+        'Assignment information is missing.',
+      );
+    }
+
+    // ----------------------------------------------------------
+    // GET ASSIGNMENT
+    // ----------------------------------------------------------
+
+    final DocumentSnapshot<
+        Map<String, dynamic>>
+    assignmentSnapshot =
+    await _firestore
+        .collection(
+      CollectionNames.assignments,
+    )
+        .doc(assignmentId)
+        .get();
+
+    if (!assignmentSnapshot.exists) {
+      throw Exception(
+        'Assignment not found.',
+      );
+    }
+
+    final AssignmentModel assignment =
+    AssignmentModel.fromFirestore(
+      assignmentSnapshot,
+    );
+
+    // ----------------------------------------------------------
+    // VALIDATE MARKS
+    // ----------------------------------------------------------
+
+    if (marks > assignment.totalMarks) {
+      throw Exception(
+        'Marks cannot be greater than '
+            '${assignment.totalMarks}.',
+      );
+    }
+
+    // ----------------------------------------------------------
+    // UPDATE SUBMISSION
+    // ----------------------------------------------------------
+
+    await submissionRef.update(
+      <String, dynamic>{
+        'marks': marks,
+        'feedback':
+        feedback.trim().isEmpty
+            ? null
+            : feedback.trim(),
+        'status': 'marked',
+        'markedAt':
+        FieldValue.serverTimestamp(),
+        'markedBy': _uid,
+      },
+    );
+  }
+
+  // ============================================================
+  // UPDATE MARKS - INSTRUCTOR
+  // ============================================================
+
+  Future<void> updateMarks({
+    required String submissionId,
+    required int marks,
+  }) async {
+    final String trimmedSubmissionId =
+    submissionId.trim();
+
+    if (trimmedSubmissionId.isEmpty) {
+      throw Exception(
+        'Invalid submission.',
+      );
+    }
+
+    if (marks < 0) {
+      throw Exception(
+        'Marks cannot be negative.',
+      );
+    }
+
+    final DocumentReference<
+        Map<String, dynamic>>
+    submissionRef =
+    _submissions.doc(
+      trimmedSubmissionId,
+    );
+
+    final DocumentSnapshot<
+        Map<String, dynamic>>
+    submissionSnapshot =
+    await submissionRef.get();
+
+    if (!submissionSnapshot.exists) {
+      throw Exception(
+        'Submission not found.',
+      );
+    }
+
+    final Map<String, dynamic> data =
+        submissionSnapshot.data() ??
+            <String, dynamic>{};
+
+    final String assignmentId =
+        data['assignmentId']?.toString() ?? '';
+
+    if (assignmentId.isEmpty) {
+      throw Exception(
+        'Assignment information is missing.',
+      );
+    }
+
+    final DocumentSnapshot<
+        Map<String, dynamic>>
+    assignmentSnapshot =
+    await _firestore
+        .collection(
+      CollectionNames.assignments,
+    )
+        .doc(assignmentId)
+        .get();
+
+    if (!assignmentSnapshot.exists) {
+      throw Exception(
+        'Assignment not found.',
+      );
+    }
+
+    final AssignmentModel assignment =
+    AssignmentModel.fromFirestore(
+      assignmentSnapshot,
+    );
+
+    if (marks > assignment.totalMarks) {
+      throw Exception(
+        'Marks cannot be greater than '
+            '${assignment.totalMarks}.',
+      );
+    }
+
+    await submissionRef.update(
+      <String, dynamic>{
+        'marks': marks,
+        'status': 'marked',
+        'markedAt':
+        FieldValue.serverTimestamp(),
+        'markedBy': _uid,
+      },
+    );
+  }
+
+  // ============================================================
+  // UPDATE FEEDBACK - INSTRUCTOR
+  // ============================================================
+
+  Future<void> updateFeedback({
+    required String submissionId,
+    required String feedback,
+  }) async {
+    final String trimmedSubmissionId =
+    submissionId.trim();
+
+    if (trimmedSubmissionId.isEmpty) {
+      throw Exception(
+        'Invalid submission.',
+      );
+    }
+
+    final DocumentReference<
+        Map<String, dynamic>>
+    submissionRef =
+    _submissions.doc(
+      trimmedSubmissionId,
+    );
+
+    final DocumentSnapshot<
+        Map<String, dynamic>>
+    submissionSnapshot =
+    await submissionRef.get();
+
+    if (!submissionSnapshot.exists) {
+      throw Exception(
+        'Submission not found.',
+      );
+    }
+
+    final String trimmedFeedback =
+    feedback.trim();
+
+    await submissionRef.update(
+      <String, dynamic>{
+        'feedback':
+        trimmedFeedback.isEmpty
+            ? null
+            : trimmedFeedback,
+        'status': 'marked',
+        'markedAt':
+        FieldValue.serverTimestamp(),
+        'markedBy': _uid,
+      },
+    );
+  }
+
+  // ============================================================
   // UPLOAD FILE TO FIREBASE STORAGE
   // ============================================================
 
@@ -166,7 +628,9 @@ class SubmissionService {
         '$safeFileName';
 
     final Reference reference =
-    _storage.ref().child(storagePath);
+    _storage.ref().child(
+      storagePath,
+    );
 
     await reference.putData(
       fileBytes,
@@ -181,7 +645,7 @@ class SubmissionService {
   }
 
   // ============================================================
-  // SUBMIT ASSIGNMENT
+  // SUBMIT ASSIGNMENT - STUDENT
   // ============================================================
 
   Future<String> submitAssignment({
@@ -285,7 +749,8 @@ class SubmissionService {
     // ----------------------------------------------------------
 
     final DocumentReference<
-        Map<String, dynamic>> docRef =
+        Map<String, dynamic>>
+    docRef =
     _submissions.doc();
 
     final SubmissionModel submission =

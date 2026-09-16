@@ -5,90 +5,95 @@ import 'package:firebase_storage/firebase_storage.dart';
 class StorageService {
   StorageService._();
 
-  static final StorageService instance =
-  StorageService._();
+  static final StorageService instance = StorageService._();
 
-  final FirebaseStorage _storage =
-      FirebaseStorage.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  // ============================================================
+  // UPLOAD PROFILE PHOTO
+  // ============================================================
 
   Future<String> uploadProfilePhoto({
     required String uid,
     required Uint8List imageBytes,
   }) async {
+    if (uid.trim().isEmpty) {
+      throw Exception('User ID is missing.');
+    }
+
+    if (imageBytes.isEmpty) {
+      throw Exception('Image file is empty.');
+    }
+
     try {
-      print('==========================================');
-      print('STORAGE UPLOAD START');
-      print('UID: $uid');
-      print('BYTES: ${imageBytes.length}');
-      print('==========================================');
+      final String path = 'profiles/${uid.trim()}.jpg';
 
-      final reference = _storage
-          .ref()
-          .child('profiles')
-          .child('$uid.jpg');
+      final Reference reference = _storage.ref().child(path);
 
-      print('STORAGE PATH: ${reference.fullPath}');
-      print('STORAGE BUCKET: ${reference.bucket}');
-      print('STARTING putData...');
-
-      final metadata = SettableMetadata(
+      final SettableMetadata metadata = SettableMetadata(
         contentType: 'image/jpeg',
+        cacheControl: 'no-cache',
       );
 
-      final uploadTask = reference.putData(
+      print('==========================================');
+      print('PROFILE PHOTO UPLOAD');
+      print('UID: ${uid.trim()}');
+      print('PATH: $path');
+      print('SIZE: ${imageBytes.length}');
+      print('==========================================');
+
+      await reference.putData(
         imageBytes,
         metadata,
       );
 
-      final snapshot = await uploadTask;
-
-      print('==========================================');
-      print('STORAGE UPLOAD COMPLETE');
-      print('STATE: ${snapshot.state}');
-      print('SIZE: ${snapshot.totalBytes}');
-      print('PATH: ${snapshot.ref.fullPath}');
-      print('==========================================');
-
-      print('GETTING DOWNLOAD URL...');
-
-      final downloadUrl =
+      final String downloadUrl =
       await reference.getDownloadURL();
 
       print('==========================================');
-      print('DOWNLOAD URL RECEIVED');
-      print(downloadUrl);
+      print('PROFILE PHOTO UPLOAD SUCCESS');
+      print('URL: $downloadUrl');
       print('==========================================');
 
       return downloadUrl;
     } on FirebaseException catch (e) {
       print('==========================================');
-      print('FIREBASE STORAGE ERROR');
+      print('PROFILE PHOTO STORAGE ERROR');
       print('CODE: ${e.code}');
       print('MESSAGE: ${e.message}');
-      print('PLUGIN: ${e.plugin}');
       print('==========================================');
 
-      rethrow;
+      throw Exception(
+        'Profile photo upload failed: ${e.message ?? e.code}',
+      );
     } catch (e) {
-      print('==========================================');
-      print('STORAGE UNKNOWN ERROR');
-      print(e);
-      print('==========================================');
+      print('PROFILE PHOTO ERROR: $e');
 
-      rethrow;
+      throw Exception(
+        'Profile photo upload failed.',
+      );
     }
   }
 
-  Future<void> deleteProfilePhoto(
-      String uid,
-      ) async {
-    final reference = _storage
+  // ============================================================
+  // DELETE PROFILE PHOTO
+  // ============================================================
+
+  Future<void> deleteProfilePhoto(String uid) async {
+    if (uid.trim().isEmpty) {
+      return;
+    }
+
+    final Reference reference = _storage
         .ref()
-        .child('profiles')
-        .child('$uid.jpg');
+        .child('profiles/${uid.trim()}.jpg');
 
     try {
       await reference.delete();
+
+      print(
+        'Profile photo deleted: ${reference.fullPath}',
+      );
     } on FirebaseException catch (e) {
       if (e.code == 'object-not-found') {
         return;

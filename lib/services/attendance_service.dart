@@ -30,7 +30,7 @@ class AttendanceService {
   }
 
   // ============================================================
-  // GET CURRENT STUDENT BATCH ID
+  // GET CURRENT USER BATCH ID
   // ============================================================
 
   Future<String?> getCurrentBatchId() async {
@@ -251,33 +251,13 @@ class AttendanceService {
       '================ ATTENDANCE DEBUG ================',
     );
 
-    print(
-      'Student UID: $_uid',
-    );
-
-    print(
-      'Total records: ${records.length}',
-    );
-
-    print(
-      'Present: $present',
-    );
-
-    print(
-      'Late: $late',
-    );
-
-    print(
-      'Absent: $absent',
-    );
-
-    print(
-      'Leave: $leave',
-    );
-
-    print(
-      'Attended: $attended',
-    );
+    print('Student UID: $_uid');
+    print('Total records: ${records.length}');
+    print('Present: $present');
+    print('Late: $late');
+    print('Absent: $absent');
+    print('Leave: $leave');
+    print('Attended: $attended');
 
     for (final record in records) {
       print(
@@ -364,5 +344,165 @@ class AttendanceService {
     return records.where(
           (record) => record.isLate,
     ).length;
+  }
+
+  // ============================================================
+  // INSTRUCTOR: GET BATCH STUDENTS
+  // ============================================================
+
+  Future<List<Map<String, dynamic>>> getBatchStudents({
+    required String batchId,
+  }) async {
+    final String requiredBatchId =
+    batchId.trim();
+
+    if (requiredBatchId.isEmpty) {
+      return const <Map<String, dynamic>>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot =
+    await _firestore
+        .collection('users')
+        .where(
+      'role',
+      isEqualTo: 'student',
+    )
+        .where(
+      'batchId',
+      isEqualTo: requiredBatchId,
+    )
+        .get();
+
+    final List<Map<String, dynamic>> students =
+    snapshot.docs.map(
+          (doc) {
+        final Map<String, dynamic> data =
+        doc.data();
+
+        return {
+          'id': doc.id,
+          'name':
+          (data['name'] ?? 'Student').toString(),
+          'email':
+          (data['email'] ?? '').toString(),
+        };
+      },
+    ).toList();
+
+    students.sort(
+          (a, b) => a['name']
+          .toString()
+          .toLowerCase()
+          .compareTo(
+        b['name']
+            .toString()
+            .toLowerCase(),
+      ),
+    );
+
+    return students;
+  }
+
+  // ============================================================
+  // INSTRUCTOR: SAVE / UPDATE ATTENDANCE
+  // ============================================================
+
+  Future<void> saveAttendance({
+    required String studentId,
+    required String batchId,
+    required String courseId,
+    required String courseName,
+    required DateTime date,
+    required String status,
+  }) async {
+    final String requiredStudentId =
+    studentId.trim();
+
+    final String requiredBatchId =
+    batchId.trim();
+
+    final String requiredCourseId =
+    courseId.trim();
+
+    if (requiredStudentId.isEmpty ||
+        requiredBatchId.isEmpty ||
+        requiredCourseId.isEmpty) {
+      throw Exception(
+        'Student, batch and course information is required.',
+      );
+    }
+
+    // Start of selected day
+    final DateTime startOfDay = DateTime(
+      date.year,
+      date.month,
+      date.day,
+    );
+
+    // Start of next day
+    final DateTime startOfNextDay =
+    startOfDay.add(
+      const Duration(days: 1),
+    );
+
+    // Find existing attendance for same
+    // student + batch + day.
+    final QuerySnapshot<Map<String, dynamic>> existing =
+    await _firestore
+        .collection('attendance')
+        .where(
+      'studentId',
+      isEqualTo: requiredStudentId,
+    )
+        .where(
+      'batchId',
+      isEqualTo: requiredBatchId,
+    )
+        .where(
+      'date',
+      isGreaterThanOrEqualTo:
+      Timestamp.fromDate(startOfDay),
+    )
+        .where(
+      'date',
+      isLessThan:
+      Timestamp.fromDate(startOfNextDay),
+    )
+        .limit(1)
+        .get();
+
+    final Map<String, dynamic> attendanceData = {
+      'studentId': requiredStudentId,
+      'batchId': requiredBatchId,
+      'courseId': requiredCourseId,
+      'courseName': courseName,
+      'date': Timestamp.fromDate(startOfDay),
+      'status': status.trim().toLowerCase(),
+
+      // Instructor who marked attendance
+      'markedBy': _uid,
+
+      'updatedAt':
+      FieldValue.serverTimestamp(),
+    };
+
+    if (existing.docs.isNotEmpty) {
+      await existing.docs.first.reference.update(
+        attendanceData,
+      );
+    } else {
+      await _firestore
+          .collection('attendance')
+          .add({
+        ...attendanceData,
+        'createdAt':
+        FieldValue.serverTimestamp(),
+      });
+    }
+
+    print(
+      '✅ Attendance saved successfully: '
+          '$requiredStudentId → $status',
+    );
   }
 }
