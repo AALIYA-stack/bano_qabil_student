@@ -38,6 +38,10 @@ class _InstructorSubmissionsScreenState
     _loadSubmissions();
   }
 
+  // ============================================================
+  // LOAD SUBMISSIONS
+  // ============================================================
+
   Future<void> _loadSubmissions() async {
     final user = _auth.currentUser;
 
@@ -135,6 +139,210 @@ class _InstructorSubmissionsScreenState
     }
   }
 
+  // ============================================================
+  // SHOW GRADE DIALOG
+  // ============================================================
+
+  Future<void> _showGradeDialog(
+    _InstructorSubmissionItem item,
+  ) async {
+    final submission = item.submission;
+    final assignment = item.assignment;
+
+    final marksController = TextEditingController(
+      text: submission.marks?.toString() ?? '',
+    );
+
+    final feedbackController = TextEditingController(
+      text: submission.feedback ?? '',
+    );
+
+    final formKey = GlobalKey<FormState>();
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Grade Submission'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Maximum marks: ${assignment.totalMarks}',
+                  style: AppTextStyles.bodyMedium,
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: marksController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Marks',
+                    hintText: 'Enter marks',
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+
+                    if (text.isEmpty) {
+                      return 'Enter marks.';
+                    }
+
+                    final marks = int.tryParse(text);
+
+                    if (marks == null) {
+                      return 'Enter a valid whole number.';
+                    }
+
+                    if (marks < 0) {
+                      return 'Marks cannot be negative.';
+                    }
+
+                    if (marks > assignment.totalMarks) {
+                      return 'Marks cannot exceed ${assignment.totalMarks}.';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: feedbackController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Feedback',
+                    hintText: 'Enter one-line feedback',
+                  ),
+                  validator: (value) {
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Enter feedback.';
+                    }
+
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                  dialogContext,
+                  false,
+                );
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.pop(
+                    dialogContext,
+                    true,
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSave != true) {
+      marksController.dispose();
+      feedbackController.dispose();
+      return;
+    }
+
+    final marks = int.parse(
+      marksController.text.trim(),
+    );
+
+    final feedback = feedbackController.text.trim();
+
+    marksController.dispose();
+    feedbackController.dispose();
+
+    await _saveGrade(
+      submissionId: submission.id,
+      marks: marks,
+      feedback: feedback,
+    );
+  }
+
+  // ============================================================
+  // SAVE GRADE TO FIRESTORE
+  // ============================================================
+
+  Future<void> _saveGrade({
+    required String submissionId,
+    required int marks,
+    required String feedback,
+  }) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Instructor is not logged in.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    try {
+      await _firestore
+          .collection('submissions')
+          .doc(submissionId)
+          .update({
+        'marks': marks,
+        'feedback': feedback,
+        'status': 'marked',
+        'markedAt': FieldValue.serverTimestamp(),
+        'markedBy': user.uid,
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Submission graded successfully.',
+          ),
+        ),
+      );
+
+      await _loadSubmissions();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to save grade: ${e.toString()}',
+          ),
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,7 +366,8 @@ class _InstructorSubmissionsScreenState
 
     if (_errorMessage != null) {
       return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics:
+            const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(
           AppDimensions.paddingMedium,
         ),
@@ -195,7 +404,8 @@ class _InstructorSubmissionsScreenState
 
     if (_submissions.isEmpty) {
       return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics:
+            const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(
           AppDimensions.paddingMedium,
         ),
@@ -223,7 +433,8 @@ class _InstructorSubmissionsScreenState
     }
 
     return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics:
+          const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(
         AppDimensions.paddingMedium,
       ),
@@ -239,9 +450,13 @@ class _InstructorSubmissionsScreenState
     );
   }
 
+  // ============================================================
+  // SUBMISSION CARD
+  // ============================================================
+
   Widget _buildSubmissionCard(
-      _InstructorSubmissionItem item,
-      ) {
+    _InstructorSubmissionItem item,
+  ) {
     final submission = item.submission;
     final assignment = item.assignment;
 
@@ -389,10 +604,36 @@ class _InstructorSubmissionsScreenState
               style: AppTextStyles.bodyMedium,
             ),
           ],
+
+          // ======================================================
+          // GRADE BUTTON
+          // ======================================================
+
+          if (submission.status == 'submitted' ||
+              submission.status == 'late') ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () =>
+                    _showGradeDialog(item),
+                icon: const Icon(
+                  Icons.grading_rounded,
+                ),
+                label: const Text(
+                  'Grade Submission',
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+
+  // ============================================================
+  // INFO ROW
+  // ============================================================
 
   Widget _buildInfoRow(
     IconData icon,
@@ -423,6 +664,10 @@ class _InstructorSubmissionsScreenState
     );
   }
 
+  // ============================================================
+  // STATUS CHIP
+  // ============================================================
+
   Widget _buildStatusChip(String status) {
     final displayStatus =
         status.isEmpty ? 'submitted' : status;
@@ -433,7 +678,8 @@ class _InstructorSubmissionsScreenState
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.10),
+        color:
+            AppColors.primary.withOpacity(0.10),
         borderRadius:
             BorderRadius.circular(20),
       ),
@@ -447,6 +693,10 @@ class _InstructorSubmissionsScreenState
     );
   }
 }
+
+// ================================================================
+// SUBMISSION + ASSIGNMENT PAIR
+// ================================================================
 
 class _InstructorSubmissionItem {
   final AssignmentModel assignment;
