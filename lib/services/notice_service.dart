@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/constants/collection_names.dart';
 import '../models/notice_model.dart';
@@ -8,25 +7,10 @@ class NoticeService {
   NoticeService._();
 
   static final NoticeService instance =
-  NoticeService._();
+      NoticeService._();
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
-
-  final FirebaseAuth _auth =
-      FirebaseAuth.instance;
-
-  String get _uid {
-    final user = _auth.currentUser;
-
-    if (user == null) {
-      throw Exception(
-        'User is not logged in.',
-      );
-    }
-
-    return user.uid;
-  }
 
   Future<List<NoticeModel>> getMyNotices({
     String? courseId,

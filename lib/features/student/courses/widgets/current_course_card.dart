@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../../../app/theme/app_colors.dart';
-import '../../../../../../../core/animations/animated_progress.dart';
+// import '../../../../../../../core/animations/animated_progress.dart';
 
 class CurrentCourseCard extends StatelessWidget {
   final String courseName;

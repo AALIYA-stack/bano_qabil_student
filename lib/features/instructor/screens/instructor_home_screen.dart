@@ -11,6 +11,7 @@ import '../../../app/theme/app_text_styles.dart';
 import '../../student/attendence/screen/attendance_screen.dart';
 import 'create_assignment_screen.dart';
 import 'instructor_submissions_screen.dart';
+import 'instructor_attendance_screen.dart';
 
 class InstructorHomeScreen extends StatefulWidget {
   const InstructorHomeScreen({super.key});
@@ -32,8 +33,8 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
 
   Future<void> _loadInstructorProfile() async {
     try {
-      final UserModel? profile =
-          await AuthService.instance.getCurrentUserProfile();
+      final UserModel? profile = await AuthService.instance
+          .getCurrentUserProfile();
 
       if (!mounted || profile == null) {
         return;
@@ -69,9 +70,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _getBehindStudents() {
-    return FirebaseFirestore.instance
-        .collection('students')
-        .snapshots();
+    return FirebaseFirestore.instance.collection('students').snapshots();
   }
 
   @override
@@ -91,7 +90,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
         index: _selectedIndex,
         children: [
           _buildDashboard(),
-          _buildPlaceholder('Classes'),
+          const InstructorAttendanceScreen(),
           _buildPlaceholder('Assignments'),
           _buildPlaceholder('Profile'),
         ],
@@ -158,18 +157,14 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                   padding: EdgeInsets.symmetric(
                     vertical: AppDimensions.paddingLarge,
                   ),
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
 
               if (snapshot.hasError) {
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingMedium,
-                    ),
+                    padding: const EdgeInsets.all(AppDimensions.paddingMedium),
                     child: Text(
                       'Unable to load classes.',
                       style: AppTextStyles.bodyMedium,
@@ -183,9 +178,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
               if (batches.isEmpty) {
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingLarge,
-                    ),
+                    padding: const EdgeInsets.all(AppDimensions.paddingLarge),
                     child: Column(
                       children: [
                         const Icon(
@@ -193,9 +186,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                           size: AppDimensions.iconXLarge,
                           color: AppColors.textLight,
                         ),
-                        const SizedBox(
-                          height: AppDimensions.spacingSmall,
-                        ),
+                        const SizedBox(height: AppDimensions.spacingSmall),
                         Text(
                           'No classes found for today.',
                           style: AppTextStyles.bodyMedium,
@@ -213,34 +204,28 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                   final studentIds =
                       (data['studentIds'] as List<dynamic>?) ?? [];
 
-                  final courseId =
-                      (data['courseId'] ?? '').toString();
+                  final courseId = (data['courseId'] ?? '').toString();
 
-                  return FutureBuilder<
-                      DocumentSnapshot<Map<String, dynamic>>>(
+                  return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                     future: courseId.isEmpty
                         ? null
                         : FirebaseFirestore.instance
-                            .collection('courses')
-                            .doc(courseId)
-                            .get(),
+                              .collection('courses')
+                              .doc(courseId)
+                              .get(),
                     builder: (context, courseSnapshot) {
                       String courseName = 'Course';
 
                       if (courseSnapshot.hasData &&
                           courseSnapshot.data!.exists) {
-                        final courseData =
-                            courseSnapshot.data!.data();
+                        final courseData = courseSnapshot.data!.data();
 
-                        courseName =
-                            (courseData?['name'] ?? 'Course')
-                                .toString();
+                        courseName = (courseData?['name'] ?? 'Course')
+                            .toString();
                       }
 
                       return _buildClassCard({
-                        'batch': (data['name'] ??
-                                'Unnamed Batch')
-                            .toString(),
+                        'batch': (data['name'] ?? 'Unnamed Batch').toString(),
                         'course': courseName,
                         'time': 'Schedule not available',
                         'students': studentIds.length,
@@ -273,8 +258,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      const InstructorSubmissionsScreen(),
+                  builder: (context) => const InstructorSubmissionsScreen(),
                 ),
               );
             },
@@ -290,18 +274,14 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                   padding: EdgeInsets.symmetric(
                     vertical: AppDimensions.paddingLarge,
                   ),
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
 
               if (snapshot.hasError) {
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingMedium,
-                    ),
+                    padding: const EdgeInsets.all(AppDimensions.paddingMedium),
                     child: Text(
                       'Unable to load submissions.',
                       style: AppTextStyles.bodyMedium,
@@ -315,9 +295,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
               if (submissions.isEmpty) {
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingLarge,
-                    ),
+                    padding: const EdgeInsets.all(AppDimensions.paddingLarge),
                     child: Column(
                       children: [
                         const Icon(
@@ -325,9 +303,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                           size: AppDimensions.iconXLarge,
                           color: AppColors.textLight,
                         ),
-                        const SizedBox(
-                          height: AppDimensions.spacingSmall,
-                        ),
+                        const SizedBox(height: AppDimensions.spacingSmall),
                         Text(
                           'No pending submissions.',
                           style: AppTextStyles.bodyMedium,
@@ -343,7 +319,8 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                   final data = doc.data();
 
                   return FutureBuilder<
-                      List<DocumentSnapshot<Map<String, dynamic>>>>(
+                    List<DocumentSnapshot<Map<String, dynamic>>>
+                  >(
                     future: Future.wait([
                       FirebaseFirestore.instance
                           .collection('assignments')
@@ -351,20 +328,16 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                           .get(),
                       FirebaseFirestore.instance
                           .collection('applications')
-                          .where(
-                            'studentId',
-                            isEqualTo: data['studentId'],
-                          )
+                          .where('studentId', isEqualTo: data['studentId'])
                           .limit(1)
                           .get()
                           .then(
-                            (snapshot) =>
-                                snapshot.docs.isNotEmpty
-                                    ? snapshot.docs.first
-                                    : FirebaseFirestore.instance
-                                        .collection('applications')
-                                        .doc('_not_found_')
-                                        .get(),
+                            (snapshot) => snapshot.docs.isNotEmpty
+                                ? snapshot.docs.first
+                                : FirebaseFirestore.instance
+                                      .collection('applications')
+                                      .doc('_not_found_')
+                                      .get(),
                           ),
                     ]),
                     builder: (context, relatedSnapshot) {
@@ -374,9 +347,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                           padding: EdgeInsets.symmetric(
                             vertical: AppDimensions.paddingSmall,
                           ),
-                          child: Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          child: Center(child: CircularProgressIndicator()),
                         );
                       }
 
@@ -389,28 +360,22 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                         });
                       }
 
-                      final assignment =
-                          relatedSnapshot.data![0].data();
+                      final assignment = relatedSnapshot.data![0].data();
 
-                      final application =
-                          relatedSnapshot.data![1].data();
+                      final application = relatedSnapshot.data![1].data();
 
                       final instructorId =
                           AuthService.instance.currentUser?.uid;
 
                       if (assignment == null ||
-                          assignment['instructorId'] !=
-                              instructorId) {
+                          assignment['instructorId'] != instructorId) {
                         return const SizedBox.shrink();
                       }
 
                       return _buildSubmissionCard({
-                        'student':
-                            application?['fullName'] ?? 'Student',
-                        'assignment':
-                            assignment['title'] ?? 'Assignment',
-                        'batch':
-                            assignment['flutter'] ?? 'Batch',
+                        'student': application?['fullName'] ?? 'Student',
+                        'assignment': assignment['title'] ?? 'Assignment',
+                        'batch': assignment['flutter'] ?? 'Batch',
                       });
                     },
                   );
@@ -437,18 +402,14 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                   padding: EdgeInsets.symmetric(
                     vertical: AppDimensions.paddingLarge,
                   ),
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 );
               }
 
               if (snapshot.hasError) {
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingMedium,
-                    ),
+                    padding: const EdgeInsets.all(AppDimensions.paddingMedium),
                     child: Text(
                       'Unable to load student progress.',
                       style: AppTextStyles.bodyMedium,
@@ -462,9 +423,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
               if (studentDocs.isEmpty) {
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      AppDimensions.paddingLarge,
-                    ),
+                    padding: const EdgeInsets.all(AppDimensions.paddingLarge),
                     child: Column(
                       children: [
                         const Icon(
@@ -472,9 +431,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                           size: AppDimensions.iconXLarge,
                           color: AppColors.textLight,
                         ),
-                        const SizedBox(
-                          height: AppDimensions.spacingSmall,
-                        ),
+                        const SizedBox(height: AppDimensions.spacingSmall),
                         Text(
                           'No student progress found.',
                           style: AppTextStyles.bodyMedium,
@@ -489,18 +446,17 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                 children: studentDocs.map((studentDoc) {
                   final studentData = studentDoc.data();
 
-                  final uid =
-                      (studentData['uid'] ?? '').toString();
+                  final uid = (studentData['uid'] ?? '').toString();
 
-                  final completed = int.tryParse(
-                        (studentData['completedAssignments'] ?? '0')
-                            .toString(),
+                  final completed =
+                      int.tryParse(
+                        (studentData['completedAssignments'] ?? '0').toString(),
                       ) ??
                       0;
 
-                  final total = int.tryParse(
-                        (studentData['totalAssignments'] ?? '0')
-                            .toString(),
+                  final total =
+                      int.tryParse(
+                        (studentData['totalAssignments'] ?? '0').toString(),
                       ) ??
                       0;
 
@@ -519,13 +475,11 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                     return _buildProgressCard({
                       'student': 'Student',
                       'batch': 'Batch',
-                      'progress':
-                          '${(progress * 100).round()}%',
+                      'progress': '${(progress * 100).round()}%',
                     });
                   }
 
-                  return FutureBuilder<
-                      DocumentSnapshot<Map<String, dynamic>>>(
+                  return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                     future: FirebaseFirestore.instance
                         .collection('users')
                         .doc(uid)
@@ -537,28 +491,22 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                           padding: EdgeInsets.symmetric(
                             vertical: AppDimensions.paddingSmall,
                           ),
-                          child: Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          child: Center(child: CircularProgressIndicator()),
                         );
                       }
 
-                      final userData =
-                          userSnapshot.data?.data();
+                      final userData = userSnapshot.data?.data();
 
-                      final studentName =
-                          (userData?['name'] ?? 'Student')
-                              .toString();
+                      final studentName = (userData?['name'] ?? 'Student')
+                          .toString();
 
-                      final batch =
-                          (userData?['batchid'] ?? 'Batch')
-                              .toString();
+                      final batch = (userData?['batchid'] ?? 'Batch')
+                          .toString();
 
                       return _buildProgressCard({
                         'student': studentName,
                         'batch': batch,
-                        'progress':
-                            '${(progress * 100).round()}%',
+                        'progress': '${(progress * 100).round()}%',
                       });
                     },
                   );
@@ -578,16 +526,11 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
       padding: const EdgeInsets.all(AppDimensions.paddingLarge),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            AppColors.banoQabilGreen,
-            AppColors.banoQabilTeal,
-          ],
+          colors: [AppColors.banoQabilGreen, AppColors.banoQabilTeal],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(
-          AppDimensions.radiusXLarge,
-        ),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
       ),
       child: Row(
         children: [
@@ -604,9 +547,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
               size: AppDimensions.iconLarge,
             ),
           ),
-          const SizedBox(
-            width: AppDimensions.spacingMedium,
-          ),
+          const SizedBox(width: AppDimensions.spacingMedium),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -631,10 +572,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                 const SizedBox(height: 4),
                 const Text(
                   'Manage your classes and students',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
             ),
@@ -652,28 +590,18 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: AppTextStyles.heading3,
-        ),
+        Text(title, style: AppTextStyles.heading3),
         if (actionText.isNotEmpty)
-          TextButton(
-            onPressed: onActionPressed,
-            child: Text(actionText),
-          ),
+          TextButton(onPressed: onActionPressed, child: Text(actionText)),
       ],
     );
   }
 
   Widget _buildClassCard(Map<String, dynamic> classData) {
     return Card(
-      margin: const EdgeInsets.only(
-        bottom: AppDimensions.spacingSmall,
-      ),
+      margin: const EdgeInsets.only(bottom: AppDimensions.spacingSmall),
       child: Padding(
-        padding: const EdgeInsets.all(
-          AppDimensions.paddingMedium,
-        ),
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Row(
           children: [
             Container(
@@ -681,32 +609,21 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
               height: 48,
               decoration: BoxDecoration(
                 color: AppColors.accentLight,
-                borderRadius: BorderRadius.circular(
-                  AppDimensions.radiusMedium,
-                ),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               ),
               child: const Icon(
                 Icons.class_rounded,
                 color: AppColors.banoQabilGreen,
               ),
             ),
-            const SizedBox(
-              width: AppDimensions.spacingMedium,
-            ),
+            const SizedBox(width: AppDimensions.spacingMedium),
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    classData['batch'],
-                    style: AppTextStyles.cardTitle,
-                  ),
+                  Text(classData['batch'], style: AppTextStyles.cardTitle),
                   const SizedBox(height: 3),
-                  Text(
-                    classData['course'],
-                    style: AppTextStyles.cardSubtitle,
-                  ),
+                  Text(classData['course'], style: AppTextStyles.cardSubtitle),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -716,10 +633,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                         color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        classData['time'],
-                        style: AppTextStyles.bodySmall,
-                      ),
+                      Text(classData['time'], style: AppTextStyles.bodySmall),
                       const SizedBox(width: 12),
                       const Icon(
                         Icons.people_outline_rounded,
@@ -736,10 +650,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textLight,
-            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
           ],
         ),
       ),
@@ -761,9 +672,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const AttendanceScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const AttendanceScreen()),
             );
           },
         ),
@@ -795,14 +704,10 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(
-        AppDimensions.radiusLarge,
-      ),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(
-            AppDimensions.paddingSmall,
-          ),
+          padding: const EdgeInsets.all(AppDimensions.paddingSmall),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -815,10 +720,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                     AppDimensions.radiusMedium,
                   ),
                 ),
-                child: Icon(
-                  icon,
-                  color: AppColors.banoQabilGreen,
-                ),
+                child: Icon(icon, color: AppColors.banoQabilGreen),
               ),
               const SizedBox(height: 8),
               Text(
@@ -833,13 +735,9 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
     );
   }
 
-  Widget _buildSubmissionCard(
-    Map<String, dynamic> submission,
-  ) {
+  Widget _buildSubmissionCard(Map<String, dynamic> submission) {
     return Card(
-      margin: const EdgeInsets.only(
-        bottom: AppDimensions.spacingSmall,
-      ),
+      margin: const EdgeInsets.only(bottom: AppDimensions.spacingSmall),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: AppColors.accentLight,
@@ -848,10 +746,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
             color: AppColors.banoQabilGreen,
           ),
         ),
-        title: Text(
-          submission['student'],
-          style: AppTextStyles.cardTitle,
-        ),
+        title: Text(submission['student'], style: AppTextStyles.cardTitle),
         subtitle: Text(
           '${submission['assignment']} • ${submission['batch']}',
           style: AppTextStyles.cardSubtitle,
@@ -864,17 +759,11 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
     );
   }
 
-  Widget _buildProgressCard(
-    Map<String, dynamic> student,
-  ) {
+  Widget _buildProgressCard(Map<String, dynamic> student) {
     return Card(
-      margin: const EdgeInsets.only(
-        bottom: AppDimensions.spacingSmall,
-      ),
+      margin: const EdgeInsets.only(bottom: AppDimensions.spacingSmall),
       child: Padding(
-        padding: const EdgeInsets.all(
-          AppDimensions.paddingMedium,
-        ),
+        padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         child: Row(
           children: [
             CircleAvatar(
@@ -884,45 +773,29 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
                 color: AppColors.error,
               ),
             ),
-            const SizedBox(
-              width: AppDimensions.spacingMedium,
-            ),
+            const SizedBox(width: AppDimensions.spacingMedium),
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    student['student'],
-                    style: AppTextStyles.cardTitle,
-                  ),
+                  Text(student['student'], style: AppTextStyles.cardTitle),
                   const SizedBox(height: 3),
-                  Text(
-                    student['batch'],
-                    style: AppTextStyles.cardSubtitle,
-                  ),
+                  Text(student['batch'], style: AppTextStyles.cardSubtitle),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value: double.parse(
-                          student['progress']
-                              .replaceAll('%', ''),
-                        ) /
+                    value:
+                        double.parse(student['progress'].replaceAll('%', '')) /
                         100,
                     minHeight: 6,
-                    borderRadius:
-                        BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ],
               ),
             ),
-            const SizedBox(
-              width: AppDimensions.spacingMedium,
-            ),
+            const SizedBox(width: AppDimensions.spacingMedium),
             Text(
               student['progress'],
-              style: AppTextStyles.labelLarge.copyWith(
-                color: AppColors.error,
-              ),
+              style: AppTextStyles.labelLarge.copyWith(color: AppColors.error),
             ),
           ],
         ),
@@ -931,12 +804,6 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
   }
 
   Widget _buildPlaceholder(String title) {
-    return Center(
-      child: Text(
-        title,
-        style: AppTextStyles.heading2,
-      ),
-    );
+    return Center(child: Text(title, style: AppTextStyles.heading2));
   }
 }
-

@@ -2,12 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/attendance_model.dart';
+import '../models/user_model.dart';
 
 class AttendanceService {
   AttendanceService._();
 
   static final AttendanceService instance =
-  AttendanceService._();
+      AttendanceService._();
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
@@ -35,10 +36,10 @@ class AttendanceService {
 
   Future<String?> getCurrentBatchId() async {
     final DocumentSnapshot<Map<String, dynamic>> userDoc =
-    await _firestore
-        .collection('users')
-        .doc(_uid)
-        .get();
+        await _firestore
+            .collection('users')
+            .doc(_uid)
+            .get();
 
     if (!userDoc.exists) {
       return null;
@@ -74,7 +75,7 @@ class AttendanceService {
     required String batchId,
   }) {
     final String requiredBatchId =
-    batchId.trim();
+        batchId.trim();
 
     if (requiredBatchId.isEmpty) {
       return Stream.value(
@@ -85,33 +86,33 @@ class AttendanceService {
     return _firestore
         .collection('attendance')
         .where(
-      'studentId',
-      isEqualTo: _uid,
-    )
+          'studentId',
+          isEqualTo: _uid,
+        )
         .where(
-      'batchId',
-      isEqualTo: requiredBatchId,
-    )
+          'batchId',
+          isEqualTo: requiredBatchId,
+        )
         .snapshots()
         .map(
           (
-          QuerySnapshot<Map<String, dynamic>> snapshot,
+            QuerySnapshot<Map<String, dynamic>> snapshot,
           ) {
-        final List<AttendanceModel> records =
-        snapshot.docs
-            .map(
-              (doc) =>
-              AttendanceModel.fromFirestore(doc),
-        )
-            .toList();
+            final List<AttendanceModel> records =
+                snapshot.docs
+                    .map(
+                      (doc) =>
+                          AttendanceModel.fromFirestore(doc),
+                    )
+                    .toList();
 
-        records.sort(
+            records.sort(
               (a, b) => b.date.compareTo(a.date),
-        );
+            );
 
-        return records;
-      },
-    );
+            return records;
+          },
+        );
   }
 
   // ============================================================
@@ -122,35 +123,35 @@ class AttendanceService {
     required String batchId,
   }) async {
     final String requiredBatchId =
-    batchId.trim();
+        batchId.trim();
 
     if (requiredBatchId.isEmpty) {
       return const <AttendanceModel>[];
     }
 
     final QuerySnapshot<Map<String, dynamic>> snapshot =
-    await _firestore
-        .collection('attendance')
-        .where(
-      'studentId',
-      isEqualTo: _uid,
-    )
-        .where(
-      'batchId',
-      isEqualTo: requiredBatchId,
-    )
-        .get();
+        await _firestore
+            .collection('attendance')
+            .where(
+              'studentId',
+              isEqualTo: _uid,
+            )
+            .where(
+              'batchId',
+              isEqualTo: requiredBatchId,
+            )
+            .get();
 
     final List<AttendanceModel> records =
-    snapshot.docs
-        .map(
-          (doc) =>
-          AttendanceModel.fromFirestore(doc),
-    )
-        .toList();
+        snapshot.docs
+            .map(
+              (doc) =>
+                  AttendanceModel.fromFirestore(doc),
+            )
+            .toList();
 
     records.sort(
-          (a, b) => b.date.compareTo(a.date),
+      (a, b) => b.date.compareTo(a.date),
     );
 
     return records;
@@ -161,26 +162,26 @@ class AttendanceService {
   // ============================================================
 
   Future<List<AttendanceModel>>
-  getAllMyAttendance() async {
+      getAllMyAttendance() async {
     final QuerySnapshot<Map<String, dynamic>> snapshot =
-    await _firestore
-        .collection('attendance')
-        .where(
-      'studentId',
-      isEqualTo: _uid,
-    )
-        .get();
+        await _firestore
+            .collection('attendance')
+            .where(
+              'studentId',
+              isEqualTo: _uid,
+            )
+            .get();
 
     final List<AttendanceModel> records =
-    snapshot.docs
-        .map(
-          (doc) =>
-          AttendanceModel.fromFirestore(doc),
-    )
-        .toList();
+        snapshot.docs
+            .map(
+              (doc) =>
+                  AttendanceModel.fromFirestore(doc),
+            )
+            .toList();
 
     records.sort(
-          (a, b) => b.date.compareTo(a.date),
+      (a, b) => b.date.compareTo(a.date),
     );
 
     return records;
@@ -196,12 +197,12 @@ class AttendanceService {
     required int month,
   }) async {
     final List<AttendanceModel> records =
-    await getMyAttendance(
+        await getMyAttendance(
       batchId: batchId,
     );
 
     return records.where(
-          (record) {
+      (record) {
         return record.date.year == year &&
             record.date.month == month;
       },
@@ -213,8 +214,8 @@ class AttendanceService {
   // ============================================================
 
   double calculatePercentage(
-      List<AttendanceModel> records,
-      ) {
+    List<AttendanceModel> records,
+  ) {
     if (records.isEmpty) {
       print('ATTENDANCE: No records found');
       return 0.0;
@@ -223,25 +224,25 @@ class AttendanceService {
     final int present = records
         .where(
           (record) => record.isPresent,
-    )
+        )
         .length;
 
     final int late = records
         .where(
           (record) => record.isLate,
-    )
+        )
         .length;
 
     final int absent = records
         .where(
           (record) => record.isAbsent,
-    )
+        )
         .length;
 
     final int leave = records
         .where(
           (record) => record.isLeave,
-    )
+        )
         .length;
 
     final int attended =
@@ -282,8 +283,8 @@ class AttendanceService {
     for (final record in records) {
       print(
         'DATE: ${record.date} | '
-            'BATCH: ${record.batchId} | '
-            'STATUS: ${record.status}',
+        'BATCH: ${record.batchId} | '
+        'STATUS: ${record.status}',
       );
     }
 
@@ -308,12 +309,12 @@ class AttendanceService {
   // ============================================================
 
   int countStatus(
-      List<AttendanceModel> records,
-      String status,
-      ) {
+    List<AttendanceModel> records,
+    String status,
+  ) {
     return records.where(
-          (record) =>
-      record.status.toLowerCase() ==
+      (record) =>
+          record.status.toLowerCase() ==
           status.toLowerCase(),
     ).length;
   }
@@ -323,10 +324,10 @@ class AttendanceService {
   // ============================================================
 
   int countPresent(
-      List<AttendanceModel> records,
-      ) {
+    List<AttendanceModel> records,
+  ) {
     return records.where(
-          (record) => record.isPresent,
+      (record) => record.isPresent,
     ).length;
   }
 
@@ -335,10 +336,10 @@ class AttendanceService {
   // ============================================================
 
   int countAbsent(
-      List<AttendanceModel> records,
-      ) {
+    List<AttendanceModel> records,
+  ) {
     return records.where(
-          (record) => record.isAbsent,
+      (record) => record.isAbsent,
     ).length;
   }
 
@@ -347,10 +348,10 @@ class AttendanceService {
   // ============================================================
 
   int countLeave(
-      List<AttendanceModel> records,
-      ) {
+    List<AttendanceModel> records,
+  ) {
     return records.where(
-          (record) => record.isLeave,
+      (record) => record.isLeave,
     ).length;
   }
 
@@ -359,10 +360,185 @@ class AttendanceService {
   // ============================================================
 
   int countLate(
-      List<AttendanceModel> records,
-      ) {
+    List<AttendanceModel> records,
+  ) {
     return records.where(
-          (record) => record.isLate,
+      (record) => record.isLate,
     ).length;
+  }
+
+  // ============================================================
+  // INSTRUCTOR ATTENDANCE
+  // GET STUDENTS FOR BATCH
+  // ============================================================
+
+  Future<List<UserModel>> getStudentsForBatch(
+    String batchId,
+  ) async {
+    final String requiredBatchId =
+        batchId.trim();
+
+    if (requiredBatchId.isEmpty) {
+      return const <UserModel>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot =
+        await _firestore
+            .collection('users')
+            .where(
+              'batchId',
+              isEqualTo: requiredBatchId,
+            )
+            .get();
+
+    final List<UserModel> students =
+        snapshot.docs
+            .map(
+              (doc) => UserModel.fromFirestore(doc),
+            )
+            .where(
+              (student) =>
+                  student.role.toLowerCase() ==
+                      'student' &&
+                  student.isActive,
+            )
+            .toList();
+
+    students.sort(
+      (a, b) => a.name
+          .toLowerCase()
+          .compareTo(
+            b.name.toLowerCase(),
+          ),
+    );
+
+    return students;
+  }
+
+  // ============================================================
+  // INSTRUCTOR ATTENDANCE
+  // GET ATTENDANCE FOR BATCH + DATE
+  // ============================================================
+
+  Future<List<AttendanceModel>>
+      getAttendanceForDate({
+    required String batchId,
+    required DateTime date,
+  }) async {
+    final String requiredBatchId =
+        batchId.trim();
+
+    if (requiredBatchId.isEmpty) {
+      return const <AttendanceModel>[];
+    }
+
+    final QuerySnapshot<Map<String, dynamic>> snapshot =
+        await _firestore
+            .collection('attendance')
+            .where(
+              'batchId',
+              isEqualTo: requiredBatchId,
+            )
+            .get();
+
+    final List<AttendanceModel> records =
+        snapshot.docs
+            .map(
+              (doc) =>
+                  AttendanceModel.fromFirestore(doc),
+            )
+            .where(
+              (record) =>
+                  record.date.year == date.year &&
+                  record.date.month == date.month &&
+                  record.date.day == date.day,
+            )
+            .toList();
+
+    records.sort(
+      (a, b) => a.studentId.compareTo(
+        b.studentId,
+      ),
+    );
+
+    return records;
+  }
+
+  // ============================================================
+  // INSTRUCTOR ATTENDANCE
+  // MARK / UPDATE ATTENDANCE
+  // ============================================================
+
+  Future<void> markAttendance({
+    required String batchId,
+    required String studentId,
+    required String status,
+    required DateTime date,
+  }) async {
+    final String requiredBatchId =
+        batchId.trim();
+
+    final String requiredStudentId =
+        studentId.trim();
+
+    final String requiredStatus =
+        status.trim().toLowerCase();
+
+    if (requiredBatchId.isEmpty) {
+      throw Exception(
+        'Batch ID is required.',
+      );
+    }
+
+    if (requiredStudentId.isEmpty) {
+      throw Exception(
+        'Student ID is required.',
+      );
+    }
+
+    const List<String> allowedStatuses =
+        <String>[
+      'present',
+      'absent',
+      'late',
+      'leave',
+    ];
+
+    if (!allowedStatuses.contains(
+      requiredStatus,
+    )) {
+      throw Exception(
+        'Invalid attendance status.',
+      );
+    }
+
+    final String dateKey =
+        '${date.year.toString().padLeft(4, '0')}'
+        '${date.month.toString().padLeft(2, '0')}'
+        '${date.day.toString().padLeft(2, '0')}';
+
+    final String documentId =
+        '${requiredBatchId}_${requiredStudentId}_$dateKey';
+
+    final AttendanceModel attendance =
+        AttendanceModel(
+      id: documentId,
+      studentId: requiredStudentId,
+      batchId: requiredBatchId,
+      date: date,
+      status: requiredStatus,
+      markedBy: _uid,
+      createdAt: DateTime.now(),
+    );
+
+    await _firestore
+        .collection('attendance')
+        .doc(documentId)
+        .set(
+          attendance.toFirestore(),
+          SetOptions(
+            merge: true,
+          ),
+        );
   }
 }
