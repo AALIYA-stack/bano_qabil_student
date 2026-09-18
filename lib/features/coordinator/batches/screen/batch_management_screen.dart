@@ -277,14 +277,20 @@ class _BatchCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _InfoRow(
-            icon: Icons.menu_book_outlined,
-            text: 'Course: ${batch.courseId}',
+          FutureBuilder<CourseModel?>(
+            future: CourseService.instance.getCourseById(batch.courseId),
+            builder: (context, snapshot) => _InfoRow(
+              icon: Icons.menu_book_outlined,
+              text: 'Course: ${snapshot.data?.name ?? batch.courseId}',
+            ),
           ),
           const SizedBox(height: 6),
-          _InfoRow(
-            icon: Icons.location_on_outlined,
-            text: 'Campus: ${batch.campusId}',
+          FutureBuilder<CampusModel?>(
+            future: CampusService.instance.getCampusById(batch.campusId),
+            builder: (context, snapshot) => _InfoRow(
+              icon: Icons.location_on_outlined,
+              text: 'Campus: ${snapshot.data?.name ?? batch.campusId}',
+            ),
           ),
           const SizedBox(height: 6),
           _InfoRow(
