@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/animations/fade_slide_animation.dart';
 import '../../../../core/widgets/loading_widget.dart';
@@ -32,6 +33,10 @@ class _NoticeDetailScreenState
     _loadNotice();
   }
 
+  // ============================================================
+  // LOAD NOTICE
+  // ============================================================
+
   Future<void> _loadNotice() async {
     try {
       final notice =
@@ -56,15 +61,21 @@ class _NoticeDetailScreenState
           'Exception: ',
           '',
         );
+
         _isLoading = false;
       });
     }
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor:
+      AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Notice Details',
@@ -73,6 +84,10 @@ class _NoticeDetailScreenState
       body: _buildBody(),
     );
   }
+
+  // ============================================================
+  // BODY
+  // ============================================================
 
   Widget _buildBody() {
     if (_isLoading) {
@@ -83,9 +98,14 @@ class _NoticeDetailScreenState
 
     if (_error != null) {
       return Center(
-        child: Text(
-          _error!,
-          textAlign: TextAlign.center,
+        child: Padding(
+          padding:
+          const EdgeInsets.all(24),
+          child: Text(
+            _error!,
+            textAlign:
+            TextAlign.center,
+          ),
         ),
       );
     }
@@ -101,19 +121,24 @@ class _NoticeDetailScreenState
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding:
+      const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment:
         CrossAxisAlignment.start,
         children: [
           FadeSlideAnimation(
             child: Container(
+              width: double.infinity,
               padding:
               const EdgeInsets.all(20),
-              decoration: BoxDecoration(
+              decoration:
+              BoxDecoration(
                 color: Colors.white,
                 borderRadius:
-                BorderRadius.circular(20),
+                BorderRadius.circular(
+                  20,
+                ),
                 border: Border.all(
                   color: notice.isImportant
                       ? AppColors.error
@@ -124,7 +149,13 @@ class _NoticeDetailScreenState
                 crossAxisAlignment:
                 CrossAxisAlignment.start,
                 children: [
+                  // ==================================================
+                  // TITLE
+                  // ==================================================
+
                   Row(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
@@ -141,34 +172,63 @@ class _NoticeDetailScreenState
                       ),
 
                       if (notice.isImportant)
-                        const Icon(
-                          Icons
-                              .priority_high_rounded,
-                          color:
-                          AppColors.error,
+                        const Padding(
+                          padding:
+                          EdgeInsets.only(
+                            left: 8,
+                          ),
+                          child: Icon(
+                            Icons
+                                .priority_high_rounded,
+                            color:
+                            AppColors
+                                .error,
+                          ),
                         ),
                     ],
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(
+                    height: 14,
+                  ),
+
+                  // ==================================================
+                  // TYPE + PRIORITY
+                  // ==================================================
 
                   Row(
                     children: [
                       _Badge(
-                        text: notice.type,
+                        text: _capitalize(
+                          notice.type,
+                        ),
                       ),
-                      const SizedBox(width: 8),
+
+                      const SizedBox(
+                        width: 8,
+                      ),
+
                       _Badge(
-                        text: notice.priority,
+                        text: _capitalize(
+                          notice.priority,
+                        ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(
+                    height: 18,
+                  ),
 
                   const Divider(),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(
+                    height: 18,
+                  ),
+
+                  // ==================================================
+                  // DESCRIPTION
+                  // ==================================================
 
                   Text(
                     notice.description,
@@ -177,20 +237,27 @@ class _NoticeDetailScreenState
                       fontSize: 15,
                       height: 1.6,
                       color:
-                      AppColors.textPrimary,
+                      AppColors
+                          .textPrimary,
                     ),
                   ),
 
+                  // ==================================================
+                  // DATE
+                  // ==================================================
+
                   if (notice.createdAt !=
                       null) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(
+                      height: 24,
+                    ),
                     Text(
                       'Published: ${_formatDate(notice.createdAt!)}',
                       style:
                       const TextStyle(
                         fontSize: 12,
-                        color:
-                        AppColors.textSecondary,
+                        color: AppColors
+                            .textSecondary,
                       ),
                     ),
                   ],
@@ -203,10 +270,38 @@ class _NoticeDetailScreenState
     );
   }
 
-  String _formatDate(DateTime date) {
+  // ============================================================
+  // DATE FORMAT
+  // ============================================================
+
+  String _formatDate(
+      DateTime date,
+      ) {
     return '${date.day}/${date.month}/${date.year}';
   }
+
+  // ============================================================
+  // TEXT FORMAT
+  // ============================================================
+
+  String _capitalize(
+      String value,
+      ) {
+    final String text =
+    value.trim();
+
+    if (text.isEmpty) {
+      return '';
+    }
+
+    return text[0].toUpperCase() +
+        text.substring(1);
+  }
 }
+
+// ================================================================
+// BADGE
+// ================================================================
 
 class _Badge extends StatelessWidget {
   final String text;
@@ -223,17 +318,22 @@ class _Badge extends StatelessWidget {
         horizontal: 10,
         vertical: 6,
       ),
-      decoration: BoxDecoration(
-        color: AppColors.accentLight,
+      decoration:
+      BoxDecoration(
+        color:
+        AppColors.accentLight,
         borderRadius:
         BorderRadius.circular(20),
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style:
+        const TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: AppColors.primary,
+          fontWeight:
+          FontWeight.w600,
+          color:
+          AppColors.primary,
         ),
       ),
     );

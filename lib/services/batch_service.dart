@@ -6,8 +6,10 @@ import '../models/batch_model.dart';
 class BatchService {
   BatchService._();
 
-  static final BatchService instance =
-      BatchService._();
+
+  static final BatchService instance = BatchService._();
+
+
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
@@ -98,12 +100,15 @@ class BatchService {
     }
   }
 
+
+  // =========================================================
+  // GET SINGLE BATCH BY ID
+  // =========================================================
   // ============================================================
   // GET BATCHES FOR INSTRUCTOR
   // ============================================================
 
-  Future<List<BatchModel>>
-  getBatchesForInstructor(
+Future<List<BatchModel>> getBatchesForInstructor(
       String instructorId,
       ) async {
     if (instructorId.trim().isEmpty) {
@@ -123,18 +128,12 @@ class BatchService {
 
     return snapshot.docs
         .map(
-          (doc) =>
-              BatchModel.fromFirestore(
-                doc,
-              ),
+          (doc) => BatchModel.fromFirestore(
+            doc,
+          ),
         )
         .toList();
   }
-
-  // =========================================================
-  // GET SINGLE BATCH BY ID
-  // =========================================================
-
   Future<BatchModel?> getBatchById(
       String batchId,
       ) async {
@@ -162,3 +161,4 @@ class BatchService {
     }
   }
 }
+

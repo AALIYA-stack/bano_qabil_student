@@ -12,12 +12,12 @@ class CollectionNames {
   static const String notices = 'notices';
   static const String notifications = 'notifications';
 
-  static const String courseModules =
-      'course_modules';
+  // Course modules
+  static const String courseModules = 'courseModules';
 
-  static const String careerProgress =
-      'career_progress';
+  // Career progress
+  static const String careerProgress = 'career_progress';
 
-  static const String moduleProgress =
-      'module_progress';
+  // Module progress
+  static const String moduleProgress = 'moduleProgress';
 }

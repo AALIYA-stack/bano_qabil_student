@@ -47,16 +47,21 @@ class _NoticesScreenState
     _loadNotices();
   }
 
+  // ============================================================
+  // LOAD NOTICES
+  // ============================================================
+
   Future<void> _loadNotices() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final profile =
-      await _authService
-          .getCurrentUserProfile();
+      await _authService.getCurrentUserProfile();
 
       if (profile == null) {
         throw Exception(
@@ -65,10 +70,12 @@ class _NoticesScreenState
       }
 
       final notices =
-      await NoticeService.instance
-          .getMyNotices(
+      await NoticeService.instance.getMyNotices(
         courseId: profile.courseId,
         batchId: profile.batchId,
+
+        // Important:
+        // Firestore campus ID should be passed here.
         campusId: profile.campus,
       );
 
@@ -89,15 +96,21 @@ class _NoticesScreenState
           'Exception: ',
           '',
         );
+
         _isLoading = false;
       });
     }
   }
 
+  // ============================================================
+  // FILTER
+  // ============================================================
+
   void _applyFilter() {
     if (_selectedFilter == 'All') {
       _filteredNotices =
-          List.from(_allNotices);
+      List<NoticeModel>.from(_allNotices);
+
       return;
     }
 
@@ -110,20 +123,38 @@ class _NoticesScreenState
       return;
     }
 
+    final String selectedType =
+    _selectedFilter.trim().toLowerCase();
+
     _filteredNotices =
         _allNotices.where(
-              (notice) =>
-          notice.type.toLowerCase() ==
-              _selectedFilter.toLowerCase(),
+              (notice) {
+            return notice.type
+                .trim()
+                .toLowerCase() ==
+                selectedType;
+          },
         ).toList();
   }
 
+  // ============================================================
+  // CHANGE FILTER
+  // ============================================================
+
   void _changeFilter(String filter) {
+    if (_selectedFilter == filter) {
+      return;
+    }
+
     setState(() {
       _selectedFilter = filter;
       _applyFilter();
     });
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +169,10 @@ class _NoticesScreenState
     );
   }
 
+  // ============================================================
+  // BODY
+  // ============================================================
+
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
@@ -148,7 +183,8 @@ class _NoticesScreenState
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding:
+          const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment:
             MainAxisAlignment.center,
@@ -159,12 +195,17 @@ class _NoticesScreenState
                 color:
                 AppColors.textSecondary,
               ),
+
               const SizedBox(height: 16),
+
               Text(
                 _error!,
-                textAlign: TextAlign.center,
+                textAlign:
+                TextAlign.center,
               ),
+
               const SizedBox(height: 16),
+
               ElevatedButton(
                 onPressed: _loadNotices,
                 child: const Text(
@@ -182,14 +223,20 @@ class _NoticesScreenState
       child: ListView(
         physics:
         const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding:
+        const EdgeInsets.all(16),
         children: [
+          // ======================================================
+          // HEADER
+          // ======================================================
+
           const FadeSlideAnimation(
             child: Text(
               'Campus Announcements',
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w700,
+                fontWeight:
+                FontWeight.w700,
                 color:
                 AppColors.textPrimary,
               ),
@@ -199,7 +246,8 @@ class _NoticesScreenState
           const SizedBox(height: 5),
 
           const FadeSlideAnimation(
-            delay: Duration(milliseconds: 60),
+            delay:
+            Duration(milliseconds: 60),
             child: Text(
               'Stay updated with the latest information.',
               style: TextStyle(
@@ -212,15 +260,22 @@ class _NoticesScreenState
 
           const SizedBox(height: 18),
 
+          // ======================================================
+          // FILTERS
+          // ======================================================
+
           FadeSlideAnimation(
             delay:
-            const Duration(milliseconds: 100),
+            const Duration(
+              milliseconds: 100,
+            ),
             child: SizedBox(
               height: 42,
               child: ListView.separated(
                 scrollDirection:
                 Axis.horizontal,
-                itemCount: _filters.length,
+                itemCount:
+                _filters.length,
                 separatorBuilder:
                     (_, _) =>
                 const SizedBox(
@@ -236,8 +291,10 @@ class _NoticesScreenState
                           _selectedFilter;
 
                   return ChoiceChip(
-                    label: Text(filter),
-                    selected: selected,
+                    label:
+                    Text(filter),
+                    selected:
+                    selected,
                     onSelected: (_) =>
                         _changeFilter(
                           filter,
@@ -250,10 +307,16 @@ class _NoticesScreenState
 
           const SizedBox(height: 18),
 
+          // ======================================================
+          // EMPTY STATE
+          // ======================================================
+
           if (_filteredNotices.isEmpty)
             const Padding(
               padding:
-              EdgeInsets.only(top: 80),
+              EdgeInsets.only(
+                top: 80,
+              ),
               child: Column(
                 children: [
                   Icon(
@@ -263,7 +326,9 @@ class _NoticesScreenState
                     color:
                     AppColors.textLight,
                   ),
+
                   SizedBox(height: 14),
+
                   Text(
                     'No notices available',
                     style: TextStyle(
@@ -272,32 +337,42 @@ class _NoticesScreenState
                       FontWeight.w600,
                     ),
                   ),
+
                   SizedBox(height: 5),
+
                   Text(
                     'You are all caught up!',
                     style: TextStyle(
                       color:
-                      AppColors.textSecondary,
+                      AppColors
+                          .textSecondary,
                     ),
                   ),
                 ],
               ),
             )
+
+          // ======================================================
+          // NOTICE LIST
+          // ======================================================
+
           else
             ..._filteredNotices
                 .asMap()
                 .entries
                 .map(
                   (entry) {
-                final index =
+                final int index =
                     entry.key;
-                final notice =
+
+                final NoticeModel notice =
                     entry.value;
 
                 return FadeSlideAnimation(
                   delay: Duration(
                     milliseconds:
-                    150 + (index * 70),
+                    150 +
+                        (index * 70),
                   ),
                   child: NoticeCard(
                     notice: notice,
@@ -318,7 +393,9 @@ class _NoticesScreenState
               },
             ),
 
-          const SizedBox(height: 24),
+          const SizedBox(
+            height: 24,
+          ),
         ],
       ),
     );
