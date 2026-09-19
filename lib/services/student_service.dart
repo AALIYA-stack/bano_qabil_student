@@ -56,8 +56,7 @@ class StudentHomeService {
   // ============================================================
 
   Future<StudentDashboardModel> getDashboard() async {
-    final firebaseUser =
-        _auth.currentUser;
+    final firebaseUser = _auth.currentUser;
 
     if (firebaseUser == null) {
       throw Exception(
@@ -70,8 +69,7 @@ class StudentHomeService {
     // ==========================================================
 
     final UserModel? user =
-    await _authService
-        .getCurrentUserProfile();
+    await _authService.getCurrentUserProfile();
 
     if (user == null) {
       throw Exception(
@@ -85,14 +83,12 @@ class StudentHomeService {
 
     CourseModel? course;
 
-    final String? courseId =
-        user.courseId;
+    final String? courseId = user.courseId;
 
     if (courseId != null &&
         courseId.trim().isNotEmpty) {
       try {
-        course =
-        await _getCourseById(
+        course = await _getCourseById(
           courseId.trim(),
         );
       } catch (_) {
@@ -106,19 +102,73 @@ class StudentHomeService {
 
     BatchModel? batch;
 
-    final String? batchId =
-        user.batchId;
+    final String? batchId = user.batchId;
 
     if (batchId != null &&
         batchId.trim().isNotEmpty) {
       try {
-        batch =
-        await _batchService
-            .getBatchById(
+        batch = await _batchService.getBatchById(
           batchId.trim(),
         );
       } catch (_) {
         batch = null;
+      }
+    }
+
+    // ==========================================================
+    // INSTRUCTOR NAME
+    // ==========================================================
+
+    String instructorName = '';
+
+    if (batch != null) {
+      final String instructorId =
+      batch!.instructorId.trim();
+
+      if (instructorId.isNotEmpty) {
+        try {
+          final DocumentSnapshot<
+              Map<String, dynamic>> instructorDoc =
+          await _firestore
+              .collection(
+            CollectionNames.users,
+          )
+              .doc(instructorId)
+              .get();
+
+          if (instructorDoc.exists) {
+            final Map<String, dynamic>? instructorData =
+            instructorDoc.data();
+
+            instructorName =
+                (instructorData?['name'] ?? '')
+                    .toString()
+                    .trim();
+
+            print(
+              'STUDENT INSTRUCTOR DEBUG: '
+                  'ID=$instructorId | '
+                  'NAME=$instructorName',
+            );
+          } else {
+            print(
+              'STUDENT INSTRUCTOR DEBUG: '
+                  'Instructor document not found. '
+                  'ID=$instructorId',
+            );
+          }
+        } catch (e) {
+          print(
+            'STUDENT INSTRUCTOR ERROR: $e',
+          );
+
+          instructorName = '';
+        }
+      } else {
+        print(
+          'STUDENT INSTRUCTOR DEBUG: '
+              'No instructor assigned to batch.',
+        );
       }
     }
 
@@ -128,8 +178,7 @@ class StudentHomeService {
 
     final defaultCareerProgress =
     CareerProgressModel(
-      studentId:
-      firebaseUser.uid,
+      studentId: firebaseUser.uid,
       cvReady: false,
       githubReady: false,
       projectsCompleted: 0,
@@ -148,8 +197,7 @@ class StudentHomeService {
       totalModules: 0,
       attendancePercentage: 0,
       assignmentAverage: 0,
-      careerProgress:
-      defaultCareerProgress,
+      careerProgress: defaultCareerProgress,
     );
 
     double attendancePercentage = 0;
@@ -174,26 +222,22 @@ class StudentHomeService {
 
       try {
         progress =
-        await _progressService
-            .getMyProgress(
-          batchId:
-          batchId.trim(),
-          courseId:
-          courseId.trim(),
+        await _progressService.getMyProgress(
+          batchId: batchId.trim(),
+          courseId: courseId.trim(),
         );
 
         attendancePercentage =
             progress.attendancePercentage;
       } catch (_) {
-        progress =
-            ProgressModel(
-              completedModules: 0,
-              totalModules: 0,
-              attendancePercentage: 0,
-              assignmentAverage: 0,
-              careerProgress:
-              defaultCareerProgress,
-            );
+        progress = ProgressModel(
+          completedModules: 0,
+          totalModules: 0,
+          attendancePercentage: 0,
+          assignmentAverage: 0,
+          careerProgress:
+          defaultCareerProgress,
+        );
 
         attendancePercentage = 0;
       }
@@ -235,23 +279,19 @@ class StudentHomeService {
     // CAREER
     // ==========================================================
 
-    CareerProgressModel?
-    careerProgress;
+    CareerProgressModel? careerProgress;
 
     try {
       careerProgress =
-      await _careerService
-          .getMyCareerProgress();
+      await _careerService.getMyCareerProgress();
     } catch (_) {
       careerProgress = null;
     }
 
     if (careerProgress != null) {
-      progress =
-          progress.copyWith(
-            careerProgress:
-            careerProgress,
-          );
+      progress = progress.copyWith(
+        careerProgress: careerProgress,
+      );
     }
 
     // ==========================================================
@@ -262,8 +302,7 @@ class StudentHomeService {
 
     try {
       unreadNotifications =
-      await _notificationService
-          .getUnreadCount();
+      await _notificationService.getUnreadCount();
     } catch (_) {
       unreadNotifications = 0;
     }
@@ -293,6 +332,7 @@ class StudentHomeService {
       careerProgress,
       unreadNotifications:
       unreadNotifications,
+      instructorName: instructorName,
     );
   }
 

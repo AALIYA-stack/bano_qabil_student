@@ -1,23 +1,69 @@
 class CollectionNames {
-  CollectionNames._();
+CollectionNames._();
 
-  static const String users = 'users';
-  static const String courses = 'courses';
-  static const String campuses = 'campuses';
-  static const String batches = 'batches';
-  static const String applications = 'applications';
-  static const String attendance = 'attendance';
-  static const String assignments = 'assignments';
-  static const String submissions = 'submissions';
-  static const String notices = 'notices';
-  static const String notifications = 'notifications';
+// ============================================================
+// USER / AUTH
+// ============================================================
 
-  // Course modules
-  static const String courseModules = 'courseModules';
+static const String users = 'users';
 
-  // Career progress
-  static const String careerProgress = 'career_progress';
+// ============================================================
+// COURSES / CAMPUS / BATCHES
+// ============================================================
 
-  // Module progress
-  static const String moduleProgress = 'moduleProgress';
+static const String courses = 'courses';
+
+static const String campuses = 'campuses';
+
+static const String batches = 'batches';
+
+// ============================================================
+// COURSE CONTENT
+// ============================================================
+
+static const String courseModules = 'courseModules';
+
+static const String courseModulesLegacy = 'course_modules';
+
+static const String moduleProgress = 'moduleProgress';
+
+static const String moduleProgressLegacy = 'module_progress';
+
+// ============================================================
+// APPLICATIONS
+// ============================================================
+
+static const String applications = 'applications';
+
+// ============================================================
+// ATTENDANCE
+// ============================================================
+
+static const String attendance = 'attendance';
+
+// ============================================================
+// ASSIGNMENTS / SUBMISSIONS
+// ============================================================
+
+static const String assignments = 'assignments';
+
+static const String submissions = 'submissions';
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+static const String notifications = 'notifications';
+
+// ============================================================
+// CAMPUS NOTICES
+// ============================================================
+
+static const String notices = 'notices';
+
+// ============================================================
+// CAREER READINESS
+// ============================================================
+
+static const String careerProgress = 'career_progress';
 }

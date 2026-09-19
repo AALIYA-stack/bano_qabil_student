@@ -1,25 +1,28 @@
-import 'package:bano_qabil_student_app/features/student/progress/screen/progress_screen.dart';
-import 'package:bano_qabil_student_app/features/student/timetable/screen/timetable_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../../../app/theme/app_colors.dart';
-import '../shared/profile/screen/profile_screen.dart';
-import 'assignments/screen/assignments_screen.dart';
-import 'courses/screen/course_list_screen.dart';
-import 'home/student_home.dart';
+import '../../../services/auth_service.dart';
 
-class StudentShell extends StatefulWidget {
-const StudentShell({
+import 'coordinator_applications_screen.dart';
+import 'coordinator_batches_screen.dart';
+import 'coordinator_dashboard_screen.dart';
+import 'coordinator_notices_screen.dart';
+import 'coordinator_report_screen.dart';
+
+class CoordinatorShell extends StatefulWidget {
+const CoordinatorShell({
 super.key,
 });
 
 @override
-State<StudentShell> createState() =>
-_StudentShellState();
+State<CoordinatorShell> createState() =>
+_CoordinatorShellState();
 }
 
-class _StudentShellState extends State<StudentShell> {
+class _CoordinatorShellState
+extends State<CoordinatorShell> {
 // ============================================================
 // CURRENT TAB
 // ============================================================
@@ -28,31 +31,29 @@ int _currentIndex = 0;
 
 bool _isLoadingIndex = true;
 
+// Coordinator ke liye separate saved tab
 static const String _selectedTabKey =
-'student_selected_tab';
+'coordinator_selected_tab';
 
 // ============================================================
-// STUDENT SCREENS
+// COORDINATOR SCREENS
 // ============================================================
 
 final List<Widget> _screens = const [
-// 0 - Home
-StudentHomeScreen(),
+// 0 - Dashboard
+CoordinatorDashboardScreen(),
 
-// 1 - Courses
-CourseListScreen(),
+// 1 - Applications
+CoordinatorApplicationsScreen(),
 
-// 2 - Classes
-TimetableScreen(),
+// 2 - Batches
+CoordinatorBatchesScreen(),
 
-// 3 - Assignments
-AssignmentsScreen(),
+// 3 - Notices
+CoordinatorNoticesScreen(),
 
-// 4 - Progress
-ProgressScreen(),
-
-// 5 - Profile
-ProfileScreen(),
+// 4 - Report
+CoordinatorReportScreen(),
 ];
 
 // ============================================================
@@ -114,7 +115,68 @@ _selectedTabKey,
 index,
 );
 } catch (_) {
-// Ignore storage errors.
+// Storage error ko ignore karenge.
+}
+}
+
+// ============================================================
+// LOGOUT
+// ============================================================
+
+Future<void> _logout() async {
+final shouldLogout = await showDialog<bool>(
+context: context,
+builder: (dialogContext) {
+return AlertDialog(
+title: const Text('Logout'),
+content: const Text(
+'Are you sure you want to logout from the Coordinator Portal?',
+),
+actions: [
+TextButton(
+onPressed: () {
+Navigator.pop(dialogContext, false);
+},
+child: const Text('Cancel'),
+),
+FilledButton(
+onPressed: () {
+Navigator.pop(dialogContext, true);
+},
+child: const Text('Logout'),
+),
+],
+);
+},
+);
+
+if (shouldLogout != true) {
+return;
+}
+
+try {
+await AuthService.instance.logout();
+
+if (!mounted) return;
+
+Navigator.pushNamedAndRemoveUntil(
+context,
+AppRoutes.login,
+(route) => false,
+);
+} catch (e) {
+if (!mounted) return;
+
+ScaffoldMessenger.of(context)
+..hideCurrentSnackBar()
+..showSnackBar(
+SnackBar(
+content: Text(
+'Logout failed: ${e.toString().replaceFirst('Exception: ', '')}',
+),
+backgroundColor: AppColors.error,
+),
+);
 }
 }
 
@@ -124,9 +186,8 @@ index,
 
 @override
 Widget build(BuildContext context) {
-// Wait until saved tab is loaded.
-// This prevents Home from flashing before restoring
-// the previously selected screen.
+// Saved tab load hone tak default Dashboard
+// ka flash prevent karenge.
 
 if (_isLoadingIndex) {
 return const Scaffold(
@@ -137,6 +198,26 @@ child: CircularProgressIndicator(),
 }
 
 return Scaffold(
+appBar: AppBar(
+title: Text(
+_getAppBarTitle(),
+),
+actions: [
+IconButton(
+tooltip: 'Logout',
+onPressed: _logout,
+icon: const Icon(
+Icons.logout_rounded,
+),
+),
+const SizedBox(width: 4),
+],
+),
+
+// ========================================================
+// BODY
+// ========================================================
+
 body: IndexedStack(
 index: _currentIndex,
 children: _screens,
@@ -165,90 +246,103 @@ AppColors.accentLight,
 
 destinations: const [
 // ----------------------------------------------------
-// HOME
+// DASHBOARD
 // ----------------------------------------------------
 
 NavigationDestination(
 icon: Icon(
-Icons.home_outlined,
+Icons.dashboard_outlined,
 ),
 selectedIcon: Icon(
-Icons.home_rounded,
+Icons.dashboard_rounded,
 ),
 label: 'Home',
 ),
 
 // ----------------------------------------------------
-// COURSES
+// APPLICATIONS
 // ----------------------------------------------------
 
 NavigationDestination(
 icon: Icon(
-Icons.school_outlined,
+Icons.inbox_outlined,
 ),
 selectedIcon: Icon(
-Icons.school_rounded,
+Icons.inbox_rounded,
 ),
-label: 'Courses',
+label: 'Applications',
 ),
 
 // ----------------------------------------------------
-// CLASSES
+// BATCHES
 // ----------------------------------------------------
 
 NavigationDestination(
 icon: Icon(
-Icons.calendar_month_outlined,
+Icons.groups_outlined,
 ),
 selectedIcon: Icon(
-Icons.calendar_month_rounded,
+Icons.groups_rounded,
 ),
-label: 'Classes',
+label: 'Batches',
 ),
 
 // ----------------------------------------------------
-// ASSIGNMENTS
+// NOTICES
 // ----------------------------------------------------
 
 NavigationDestination(
 icon: Icon(
-Icons.assignment_outlined,
+Icons.campaign_outlined,
 ),
 selectedIcon: Icon(
-Icons.assignment_rounded,
+Icons.campaign_rounded,
 ),
-label: 'Assignments',
+label: 'Notices',
 ),
 
 // ----------------------------------------------------
-// PROGRESS
+// REPORT
 // ----------------------------------------------------
 
 NavigationDestination(
 icon: Icon(
-Icons.insights_outlined,
+Icons.bar_chart_outlined,
 ),
 selectedIcon: Icon(
-Icons.insights_rounded,
+Icons.bar_chart_rounded,
 ),
-label: 'Progress',
-),
-
-// ----------------------------------------------------
-// PROFILE
-// ----------------------------------------------------
-
-NavigationDestination(
-icon: Icon(
-Icons.person_outline_rounded,
-),
-selectedIcon: Icon(
-Icons.person_rounded,
-),
-label: 'Profile',
+label: 'Report',
 ),
 ],
 ),
 );
 }
+
+// ============================================================
+// APP BAR TITLE
+// ============================================================
+
+String _getAppBarTitle() {
+switch (_currentIndex) {
+case 0:
+return 'Coordinator Portal';
+
+case 1:
+return 'Applications';
+
+case 2:
+return 'Batches';
+
+case 3:
+return 'Notices';
+
+case 4:
+return 'Reports';
+
+default:
+return 'Coordinator Portal';
 }
+}
+}
+

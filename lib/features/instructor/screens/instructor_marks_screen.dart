@@ -35,16 +35,16 @@ class _InstructorMarksScreenState
   // ============================================================
 
   static const Color _primaryGreen =
-  Color(0xFF2E7D32);
+  Color(0xFF78DA37);
 
   static const Color _lightGreen =
-  Color(0xFF43A047);
+  Color(0xFF30D12A);
 
   static const Color _paleGreen =
-  Color(0xFFE8F5E9);
+  Color(0xA32ECD3B);
 
   static const Color _darkGreen =
-  Color(0xFF1B5E20);
+  Color(0xA32EC53A);
 
   // ============================================================
   // STATE

@@ -40,10 +40,10 @@ class _InstructorAttendanceScreenState
   // COLORS
   // ============================================================
 
-  static const Color _primaryGreen = Color(0xFF006B3C);
-  static const Color _darkGreen = Color(0xFF004D2C);
-  static const Color _lightGreen = Color(0xFF8BC53F);
-  static const Color _paleGreen = Color(0xFFE8F5E9);
+  static const Color _primaryGreen = Color(0xA315C023);
+  static const Color _darkGreen = Color(0xA315C023);
+  static const Color _lightGreen = Color(0xA315C023);
+  static const Color _paleGreen = Color(0xFFFFFFFF);
 
   @override
   void initState() {

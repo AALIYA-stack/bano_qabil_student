@@ -357,6 +357,10 @@ class AttendanceService {
     batchId.trim();
 
     if (requiredBatchId.isEmpty) {
+      print(
+        'ATTENDANCE STUDENT DEBUG: Empty batch ID',
+      );
+
       return const <Map<String, dynamic>>[];
     }
 
@@ -373,11 +377,47 @@ class AttendanceService {
     )
         .get();
 
+    // ==========================================================
+    // DEBUG
+    // ==========================================================
+
+    print(
+      '==============================================',
+    );
+
+    print(
+      'ATTENDANCE STUDENT DEBUG',
+    );
+
+    print(
+      'Requested Batch ID: $requiredBatchId',
+    );
+
+    print(
+      'Students Found: ${snapshot.docs.length}',
+    );
+
+    print(
+      '==============================================',
+    );
+
+    // ==========================================================
+    // BUILD STUDENT LIST
+    // ==========================================================
+
     final List<Map<String, dynamic>> students =
     snapshot.docs.map(
           (doc) {
         final Map<String, dynamic> data =
         doc.data();
+
+        print(
+          'Student: ${doc.id} | '
+              'Name: ${data['name']} | '
+              'Role: ${data['role']} | '
+              'Batch: ${data['batchId']} | '
+              'Course: ${data['courseId']}',
+        );
 
         return {
           'id': doc.id,
@@ -389,6 +429,10 @@ class AttendanceService {
       },
     ).toList();
 
+    // ==========================================================
+    // SORT BY NAME
+    // ==========================================================
+
     students.sort(
           (a, b) => a['name']
           .toString()
@@ -398,6 +442,19 @@ class AttendanceService {
             .toString()
             .toLowerCase(),
       ),
+    );
+
+    print(
+      '==============================================',
+    );
+
+    print(
+      'FINAL ATTENDANCE STUDENT COUNT: '
+          '${students.length}',
+    );
+
+    print(
+      '==============================================',
     );
 
     return students;
@@ -445,8 +502,10 @@ class AttendanceService {
       const Duration(days: 1),
     );
 
-    // Find existing attendance for same
-    // student + batch + day.
+    // ==========================================================
+    // FIND EXISTING ATTENDANCE
+    // ==========================================================
+
     final QuerySnapshot<Map<String, dynamic>> existing =
     await _firestore
         .collection('attendance')
@@ -471,6 +530,10 @@ class AttendanceService {
         .limit(1)
         .get();
 
+    // ==========================================================
+    // ATTENDANCE DATA
+    // ==========================================================
+
     final Map<String, dynamic> attendanceData = {
       'studentId': requiredStudentId,
       'batchId': requiredBatchId,
@@ -486,11 +549,21 @@ class AttendanceService {
       FieldValue.serverTimestamp(),
     };
 
+    // ==========================================================
+    // UPDATE EXISTING
+    // ==========================================================
+
     if (existing.docs.isNotEmpty) {
       await existing.docs.first.reference.update(
         attendanceData,
       );
-    } else {
+    }
+
+    // ==========================================================
+    // CREATE NEW
+    // ==========================================================
+
+    else {
       await _firestore
           .collection('attendance')
           .add({

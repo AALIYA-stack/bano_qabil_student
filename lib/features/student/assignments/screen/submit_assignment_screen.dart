@@ -52,7 +52,7 @@ class _SubmitAssignmentScreenState
   Future<void> _pickFile() async {
     try {
       final FilePickerResult? result =
-      await FilePicker.platform.pickFiles(
+      await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
           'jpg',
@@ -70,20 +70,18 @@ class _SubmitAssignmentScreenState
           'zip',
         ],
         withData: true,
+        allowMultiple: false,
       );
 
-      if (result == null ||
-          result.files.isEmpty) {
+      if (result == null || result.files.isEmpty) {
         return;
       }
 
-      final PlatformFile file =
-          result.files.first;
+      final PlatformFile file = result.files.first;
 
       final Uint8List? bytes = file.bytes;
 
-      if (bytes == null ||
-          bytes.isEmpty) {
+      if (bytes == null || bytes.isEmpty) {
         _showMessage(
           'Unable to read the selected file.',
           isError: true,
@@ -92,8 +90,7 @@ class _SubmitAssignmentScreenState
       }
 
       // Maximum 10 MB
-      const int maxSize =
-          10 * 1024 * 1024;
+      const int maxSize = 10 * 1024 * 1024;
 
       if (bytes.length > maxSize) {
         _showMessage(
@@ -133,8 +130,7 @@ class _SubmitAssignmentScreenState
     final String answer =
     _answerController.text.trim();
 
-    if (answer.isEmpty &&
-        _fileBytes == null) {
+    if (answer.isEmpty && _fileBytes == null) {
       _showMessage(
         'Please write an answer or attach a file.',
         isError: true,
@@ -148,8 +144,7 @@ class _SubmitAssignmentScreenState
 
     try {
       final String submissionId =
-      await SubmissionService.instance
-          .submitAssignment(
+      await SubmissionService.instance.submitAssignment(
         assignment: widget.assignment,
         batchId: widget.batchId,
         answerText: answer,
@@ -159,9 +154,7 @@ class _SubmitAssignmentScreenState
 
       if (!mounted) return;
 
-      await _showSuccessDialog(
-        submissionId,
-      );
+      await _showSuccessDialog(submissionId);
     } catch (e) {
       if (!mounted) return;
 
@@ -194,8 +187,7 @@ class _SubmitAssignmentScreenState
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius:
-            BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(20),
           ),
           icon: const Icon(
             Icons.check_circle_rounded,
@@ -216,10 +208,7 @@ class _SubmitAssignmentScreenState
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(dialogContext).pop();
-
-                  Navigator.of(context).pop(
-                    true,
-                  );
+                  Navigator.of(context).pop(true);
                 },
                 child: const Text(
                   'Done',
@@ -240,8 +229,7 @@ class _SubmitAssignmentScreenState
       String message, {
         bool isError = false,
       }) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError
@@ -261,8 +249,7 @@ class _SubmitAssignmentScreenState
         widget.assignment.dueDate;
 
     return Scaffold(
-      backgroundColor:
-      AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Submit Assignment',
@@ -280,42 +267,30 @@ class _SubmitAssignmentScreenState
                 dueDate,
               ),
             ),
-
             const SizedBox(height: 18),
-
             FadeSlideAnimation(
-              delay:
-              const Duration(
+              delay: const Duration(
                 milliseconds: 100,
               ),
               child: _buildAnswerField(),
             ),
-
             const SizedBox(height: 18),
-
             FadeSlideAnimation(
-              delay:
-              const Duration(
+              delay: const Duration(
                 milliseconds: 160,
               ),
               child: _buildFilePicker(),
             ),
-
             const SizedBox(height: 25),
-
             FadeSlideAnimation(
-              delay:
-              const Duration(
+              delay: const Duration(
                 milliseconds: 220,
               ),
               child: SizedBox(
-                height:
-                AppDimensions.buttonHeight,
+                height: AppDimensions.buttonHeight,
                 child: ElevatedButton.icon(
                   onPressed:
-                  _isSubmitting
-                      ? null
-                      : _submit,
+                  _isSubmitting ? null : _submit,
                   icon: _isSubmitting
                       ? const SizedBox(
                     width: 19,
@@ -323,8 +298,7 @@ class _SubmitAssignmentScreenState
                     child:
                     CircularProgressIndicator(
                       strokeWidth: 2,
-                      color:
-                      Colors.white,
+                      color: Colors.white,
                     ),
                   )
                       : const Icon(
@@ -338,15 +312,12 @@ class _SubmitAssignmentScreenState
                 ),
               ),
             ),
-
             const SizedBox(height: 12),
-
             const Text(
               'Please review your answer before submitting. '
                   'Submissions cannot be edited after submission.',
               textAlign: TextAlign.center,
-              style:
-              AppTextStyles.bodySmall,
+              style: AppTextStyles.bodySmall,
             ),
           ],
         ),
@@ -362,12 +333,10 @@ class _SubmitAssignmentScreenState
       DateTime? dueDate,
       ) {
     return Container(
-      padding:
-      const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius:
-        BorderRadius.circular(
+        borderRadius: BorderRadius.circular(
           AppDimensions.radiusLarge,
         ),
         border: Border.all(
@@ -380,38 +349,30 @@ class _SubmitAssignmentScreenState
         children: [
           Text(
             widget.assignment.title,
-            style:
-            AppTextStyles.heading2,
+            style: AppTextStyles.heading2,
           ),
-
           const SizedBox(height: 10),
-
           Row(
             children: [
               const Icon(
                 Icons.stars_outlined,
                 size: 18,
-                color:
-                AppColors.primary,
+                color: AppColors.primary,
               ),
               const SizedBox(width: 7),
               Text(
                 '${widget.assignment.totalMarks} marks',
-                style:
-                AppTextStyles.bodyMedium,
+                style: AppTextStyles.bodyMedium,
               ),
             ],
           ),
-
           const SizedBox(height: 7),
-
           Row(
             children: [
               const Icon(
                 Icons.schedule_outlined,
                 size: 18,
-                color:
-                AppColors.primary,
+                color: AppColors.primary,
               ),
               const SizedBox(width: 7),
               Expanded(
@@ -421,8 +382,7 @@ class _SubmitAssignmentScreenState
                       : 'Due ${DateFormat(
                     'dd MMM yyyy, hh:mm a',
                   ).format(dueDate)}',
-                  style:
-                  AppTextStyles.bodyMedium,
+                  style: AppTextStyles.bodyMedium,
                 ),
               ),
             ],
@@ -438,12 +398,10 @@ class _SubmitAssignmentScreenState
 
   Widget _buildAnswerField() {
     return Container(
-      padding:
-      const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius:
-        BorderRadius.circular(
+        borderRadius: BorderRadius.circular(
           AppDimensions.radiusLarge,
         ),
         border: Border.all(
@@ -458,29 +416,23 @@ class _SubmitAssignmentScreenState
             children: [
               Icon(
                 Icons.edit_note_rounded,
-                color:
-                AppColors.primary,
+                color: AppColors.primary,
               ),
               SizedBox(width: 8),
               Text(
                 'Your Answer',
-                style:
-                AppTextStyles.heading3,
+                style: AppTextStyles.heading3,
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           TextFormField(
-            controller:
-            _answerController,
+            controller: _answerController,
             maxLines: 8,
             maxLength: 3000,
             textInputAction:
             TextInputAction.newline,
-            decoration:
-            const InputDecoration(
+            decoration: const InputDecoration(
               hintText:
               'Write your assignment answer here...',
               alignLabelWithHint: true,
@@ -509,17 +461,13 @@ class _SubmitAssignmentScreenState
   Widget _buildFilePicker() {
     final bool isImage =
         _fileName != null &&
-            _isImageFile(
-              _fileName!,
-            );
+            _isImageFile(_fileName!);
 
     return Container(
-      padding:
-      const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius:
-        BorderRadius.circular(
+        borderRadius: BorderRadius.circular(
           AppDimensions.radiusLarge,
         ),
         border: Border.all(
@@ -534,77 +482,55 @@ class _SubmitAssignmentScreenState
             children: [
               Icon(
                 Icons.attach_file_rounded,
-                color:
-                AppColors.primary,
+                color: AppColors.primary,
               ),
               SizedBox(width: 8),
               Text(
                 'Attachment',
-                style:
-                AppTextStyles.heading3,
+                style: AppTextStyles.heading3,
               ),
             ],
           ),
-
           const SizedBox(height: 6),
-
           const Text(
             'Optional: attach your assignment file. '
                 'Maximum size is 10 MB.',
-            style:
-            AppTextStyles.bodySmall,
+            style: AppTextStyles.bodySmall,
           ),
-
           const SizedBox(height: 14),
-
-          if (_fileBytes != null &&
-              isImage)
+          if (_fileBytes != null && isImage)
             ClipRRect(
               borderRadius:
-              BorderRadius.circular(
-                14,
-              ),
+              BorderRadius.circular(14),
               child: Image.memory(
                 _fileBytes!,
                 height: 180,
-                width:
-                double.infinity,
+                width: double.infinity,
                 fit: BoxFit.cover,
               ),
             ),
-
           if (_fileBytes != null)
             const SizedBox(height: 12),
-
           if (_fileBytes != null)
             Container(
-              padding:
-              const EdgeInsets.all(12),
-              decoration:
-              BoxDecoration(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
                 borderRadius:
-                BorderRadius.circular(
-                  12,
-                ),
+                BorderRadius.circular(12),
                 border: Border.all(
-                  color:
-                  AppColors.border,
+                  color: AppColors.border,
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
                     isImage
-                        ? Icons
-                        .image_outlined
+                        ? Icons.image_outlined
                         : Icons
                         .insert_drive_file_outlined,
-                    color:
-                    AppColors.primary,
+                    color: AppColors.primary,
                   ),
-                  const SizedBox(
-                    width: 10,
-                  ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _fileName ??
@@ -612,47 +538,35 @@ class _SubmitAssignmentScreenState
                       maxLines: 2,
                       overflow:
                       TextOverflow.ellipsis,
-                      style: AppTextStyles
-                          .bodyMedium,
+                      style:
+                      AppTextStyles.bodyMedium,
                     ),
                   ),
                   IconButton(
-                    onPressed:
-                    _isSubmitting
+                    onPressed: _isSubmitting
                         ? null
                         : () {
                       setState(() {
-                        _fileBytes =
-                        null;
-                        _fileName =
-                        null;
+                        _fileBytes = null;
+                        _fileName = null;
                       });
                     },
-                    icon:
-                    const Icon(
-                      Icons
-                          .delete_outline_rounded,
-                      color:
-                      AppColors.error,
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.error,
                     ),
                   ),
                 ],
               ),
             ),
-
           const SizedBox(height: 12),
-
           SizedBox(
             width: double.infinity,
-            child:
-            OutlinedButton.icon(
+            child: OutlinedButton.icon(
               onPressed:
-              _isSubmitting
-                  ? null
-                  : _pickFile,
+              _isSubmitting ? null : _pickFile,
               icon: const Icon(
-                Icons
-                    .folder_open_outlined,
+                Icons.folder_open_outlined,
               ),
               label: Text(
                 _fileBytes == null
@@ -666,14 +580,13 @@ class _SubmitAssignmentScreenState
     );
   }
 
-  bool _isImageFile(
-      String fileName,
-      ) {
+  // ============================================================
+  // IMAGE CHECK
+  // ============================================================
+
+  bool _isImageFile(String fileName) {
     final String extension =
-        fileName
-            .toLowerCase()
-            .split('.')
-            .last;
+        fileName.toLowerCase().split('.').last;
 
     return [
       'jpg',

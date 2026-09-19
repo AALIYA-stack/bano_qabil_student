@@ -6,7 +6,8 @@ import '../models/batch_model.dart';
 class BatchService {
   BatchService._();
 
-  static final BatchService instance = BatchService._();
+  static final BatchService instance =
+  BatchService._();
 
   final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
@@ -14,19 +15,27 @@ class BatchService {
   // =========================================================
   // GET BATCHES FOR COURSE
   // =========================================================
+
   Future<List<BatchModel>> getBatchesForCourse(
       String courseId,
       ) async {
     try {
-      final cleanCourseId = courseId.trim();
+      final cleanCourseId =
+      courseId.trim().toLowerCase();
 
+      print('');
       print('========================================');
       print('GETTING BATCHES FOR COURSE');
-      print('COURSE ID FROM APP: $cleanCourseId');
+      print('COURSE ID FROM APP: "$cleanCourseId"');
+      print('========================================');
 
-      // Pehle sirf open batches get kar rahe hain.
-      // courseId ka filter Dart mein karenge taake
-      // exact mismatch easily detect ho sake.
+      // -----------------------------------------------------
+      // Get all open batches.
+      //
+      // We intentionally filter courseId in Dart.
+      // This makes Firebase data mismatches easier to detect.
+      // -----------------------------------------------------
+
       final snapshot = await _firestore
           .collection(CollectionNames.batches)
           .where(
@@ -42,86 +51,184 @@ class BatchService {
 
       final List<BatchModel> batches = [];
 
+      // -----------------------------------------------------
+      // PROCESS EVERY BATCH
+      // -----------------------------------------------------
+
       for (final doc in snapshot.docs) {
         try {
-          final batch = BatchModel.fromFirestore(doc);
+          final rawData = doc.data();
 
+          print('');
+          print('----------------------------------------');
+          print('CHECKING BATCH: ${doc.id}');
           print(
-            'BATCH: ${batch.id} | '
-                'courseId: ${batch.courseId} | '
-                'campusId: ${batch.campusId} | '
-                'isOpen: ${batch.isOpen} | '
-                'seats: ${batch.seats} | '
-                'enrolled: ${batch.enrolledStudents} | '
-                'seatsLeft: ${batch.seatsLeft}',
+            'FIREBASE RAW courseId: '
+                '"${rawData['courseId']}"',
+          );
+          print(
+            'FIREBASE RAW campusId: '
+                '"${rawData['campusId']}"',
+          );
+          print(
+            'FIREBASE RAW isOpen: '
+                '"${rawData['isOpen']}"',
+          );
+          print(
+            'FIREBASE RAW seats: '
+                '"${rawData['seats']}"',
+          );
+          print(
+            'FIREBASE RAW enrolledStudents: '
+                '"${rawData['enrolledStudents']}"',
           );
 
-          // Course ID exact match
-          if (batch.courseId.trim() != cleanCourseId) {
+          final batch =
+          BatchModel.fromFirestore(doc);
+
+          final batchCourseId =
+          batch.courseId.trim().toLowerCase();
+
+          print(
+            'PARSED courseId: "$batchCourseId"',
+          );
+
+          print(
+            'EXPECTED courseId: "$cleanCourseId"',
+          );
+
+          print(
+            'seatsLeft: ${batch.seatsLeft}',
+          );
+
+          // -------------------------------------------------
+          // COURSE MATCH
+          // -------------------------------------------------
+
+          if (batchCourseId != cleanCourseId) {
+            print(
+              '❌ SKIPPED: courseId does not match',
+            );
+
             continue;
           }
 
-          // Open batch hona zaroori hai
+          print(
+            '✅ COURSE ID MATCH',
+          );
+
+          // -------------------------------------------------
+          // OPEN CHECK
+          // -------------------------------------------------
+
           if (!batch.isOpen) {
+            print(
+              '❌ SKIPPED: batch is closed',
+            );
+
             continue;
           }
 
-          // Seats available honi chahiye
+          // -------------------------------------------------
+          // SEATS CHECK
+          // -------------------------------------------------
+
           if (batch.seatsLeft <= 0) {
+            print(
+              '❌ SKIPPED: no seats available',
+            );
+
             continue;
           }
+
+          // -------------------------------------------------
+          // MATCHED
+          // -------------------------------------------------
+
+          print(
+            '✅ BATCH ADDED: ${batch.id}',
+          );
 
           batches.add(batch);
-        } catch (e) {
+        } catch (e, stackTrace) {
           print(
-            'ERROR READING BATCH ${doc.id}: $e',
+            '❌ ERROR READING BATCH ${doc.id}',
           );
+
+          print('ERROR: $e');
+          print('STACK: $stackTrace');
         }
       }
 
+      print('');
+      print('========================================');
       print(
-        'MATCHED BATCHES FOR $cleanCourseId: '
-            '${batches.length}',
+        'MATCHED BATCHES FOR '
+            '"$cleanCourseId": ${batches.length}',
       );
+
+      for (final batch in batches) {
+        print(
+          'MATCHED → ${batch.id} | '
+              'course=${batch.courseId} | '
+              'campus=${batch.campusId} | '
+              'seatsLeft=${batch.seatsLeft}',
+        );
+      }
 
       print('========================================');
+      print('');
 
       return batches;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('');
       print(
-        'ERROR LOADING BATCHES FOR COURSE '
-            '$courseId: $e',
+        '❌ ERROR LOADING BATCHES FOR COURSE '
+            '"$courseId"',
       );
+
+      print('ERROR: $e');
+      print('STACK: $stackTrace');
 
       rethrow;
     }
   }
 
   // =========================================================
-  // GET SINGLE BATCH BY ID
+  // GET SINGLE BATCH
   // =========================================================
+
   Future<BatchModel?> getBatchById(
       String batchId,
       ) async {
     try {
-      if (batchId.trim().isEmpty) {
+      final cleanBatchId =
+      batchId.trim();
+
+      if (cleanBatchId.isEmpty) {
         return null;
       }
 
       final doc = await _firestore
           .collection(CollectionNames.batches)
-          .doc(batchId.trim())
+          .doc(cleanBatchId)
           .get();
 
       if (!doc.exists) {
+        print(
+          'BATCH NOT FOUND: $cleanBatchId',
+        );
+
         return null;
       }
 
       return BatchModel.fromFirestore(doc);
-    } catch (e) {
+    } catch (e, stackTrace) {
       print(
         'ERROR LOADING BATCH $batchId: $e',
       );
+
+      print(stackTrace);
 
       rethrow;
     }
