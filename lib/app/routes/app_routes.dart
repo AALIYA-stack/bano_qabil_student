@@ -14,6 +14,9 @@ import '../../features/student/class/screen/my_classes_screen.dart';
 // INSTRUCTOR
 import '../../features/instructor/screens/instructor_home_screen.dart';
 
+// COORDINATOR
+import '../../features/coordinator/home/coordinator_home_screen.dart';
+
 class AppRoutes {
   AppRoutes._();
 
@@ -63,8 +66,8 @@ class AppRoutes {
 
       // COORDINATOR
 
-      // coordinatorDashboard: (context) =>
-      //     const CoordinatorDashboardScreen(),
+      coordinatorDashboard: (context) =>
+          const CoordinatorHomeScreen(),
 
       // SEED DATA
 
