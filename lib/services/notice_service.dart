@@ -1,3 +1,4 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/constants/collection_names.dart';
@@ -123,5 +124,54 @@ class NoticeService {
     }
 
     return notice;
+  }
+
+  // ============================================================
+  // POST INSTRUCTOR NOTICE
+  // ============================================================
+
+  Future<void> postInstructorNotice({
+    required String title,
+    required String description,
+    required String type,
+    required String priority,
+    required String courseId,
+    required String batchId,
+    required String campusId,
+    required String instructorId,
+  }) async {
+    final trimmedTitle = title.trim();
+    final trimmedDescription = description.trim();
+
+    if (trimmedTitle.isEmpty) {
+      throw Exception('Notice title is required.');
+    }
+
+    if (trimmedDescription.isEmpty) {
+      throw Exception('Notice description is required.');
+    }
+
+    if (batchId.trim().isEmpty) {
+      throw Exception('Please select a batch.');
+    }
+
+    if (instructorId.trim().isEmpty) {
+      throw Exception('Instructor is not logged in.');
+    }
+
+    await _firestore
+        .collection(CollectionNames.notices)
+        .add({
+      'title': trimmedTitle,
+      'description': trimmedDescription,
+      'type': type,
+      'priority': priority,
+      'courseId': courseId.trim(),
+      'batchId': batchId.trim(),
+      'campusId': campusId.trim(),
+      'createdBy': instructorId.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'isActive': true,
+    });
   }
 }
