@@ -138,7 +138,7 @@ class _ApplicationsInboxScreenState
                 vertical: 6,
               ),
               itemCount: _filters.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final option = _filters[index];
@@ -190,7 +190,7 @@ class _ApplicationsInboxScreenState
                     AppDimensions.paddingMedium,
                   ),
                   itemCount: applications.length,
-                  separatorBuilder: (_, __) =>
+                  separatorBuilder: (_, _) =>
                       const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final application = applications[index];

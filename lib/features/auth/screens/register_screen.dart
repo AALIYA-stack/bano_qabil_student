@@ -47,7 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   // ADDED: CAMPUS / BRANCH SELECTION
   // ============================================================
 
-  // TODO: replace with your app's real list of campuses/branches.
+  
   static const List<String> _campusOptions = [
     'Lahore',
     'Karachi',

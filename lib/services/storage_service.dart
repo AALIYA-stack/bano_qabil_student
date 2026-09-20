@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
@@ -16,20 +15,20 @@ class StorageService {
     required Uint8List imageBytes,
   }) async {
     try {
-      print('==========================================');
-      print('STORAGE UPLOAD START');
-      print('UID: $uid');
-      print('BYTES: ${imageBytes.length}');
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('STORAGE UPLOAD START');
+      debugPrint('UID: $uid');
+      debugPrint('BYTES: ${imageBytes.length}');
+      debugPrint('==========================================');
 
       final reference = _storage
           .ref()
           .child('profiles')
           .child('$uid.jpg');
 
-      print('STORAGE PATH: ${reference.fullPath}');
-      print('STORAGE BUCKET: ${reference.bucket}');
-      print('STARTING putData...');
+      debugPrint('STORAGE PATH: ${reference.fullPath}');
+      debugPrint('STORAGE BUCKET: ${reference.bucket}');
+      debugPrint('STARTING putData...');
 
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
@@ -42,38 +41,38 @@ class StorageService {
 
       final snapshot = await uploadTask;
 
-      print('==========================================');
-      print('STORAGE UPLOAD COMPLETE');
-      print('STATE: ${snapshot.state}');
-      print('SIZE: ${snapshot.totalBytes}');
-      print('PATH: ${snapshot.ref.fullPath}');
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('STORAGE UPLOAD COMPLETE');
+      debugPrint('STATE: ${snapshot.state}');
+      debugPrint('SIZE: ${snapshot.totalBytes}');
+      debugPrint('PATH: ${snapshot.ref.fullPath}');
+      debugPrint('==========================================');
 
-      print('GETTING DOWNLOAD URL...');
+      debugPrint('GETTING DOWNLOAD URL...');
 
       final downloadUrl =
       await reference.getDownloadURL();
 
-      print('==========================================');
-      print('DOWNLOAD URL RECEIVED');
-      print(downloadUrl);
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('DOWNLOAD URL RECEIVED');
+      debugPrint(downloadUrl);
+      debugPrint('==========================================');
 
       return downloadUrl;
     } on FirebaseException catch (e) {
-      print('==========================================');
-      print('FIREBASE STORAGE ERROR');
-      print('CODE: ${e.code}');
-      print('MESSAGE: ${e.message}');
-      print('PLUGIN: ${e.plugin}');
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('FIREBASE STORAGE ERROR');
+      debugPrint('CODE: ${e.code}');
+      debugPrint('MESSAGE: ${e.message}');
+      debugPrint('PLUGIN: ${e.plugin}');
+      debugPrint('==========================================');
 
       rethrow;
     } catch (e) {
-      print('==========================================');
-      print('STORAGE UNKNOWN ERROR');
-      print(e);
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('STORAGE UNKNOWN ERROR');
+      debugPrint(e.toString());
+      debugPrint('==========================================');
 
       rethrow;
     }

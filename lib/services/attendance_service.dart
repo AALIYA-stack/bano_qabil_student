@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:flutter/foundation.dart';
 import '../models/attendance_model.dart';
 import '../models/user_model.dart';
 
@@ -217,7 +217,7 @@ class AttendanceService {
     List<AttendanceModel> records,
   ) {
     if (records.isEmpty) {
-      print('ATTENDANCE: No records found');
+      debugPrint('ATTENDANCE: No records found');
       return 0.0;
     }
 
@@ -248,40 +248,40 @@ class AttendanceService {
     final int attended =
         present + late;
 
-    print(
+    debugPrint(
       '================ ATTENDANCE DEBUG ================',
     );
 
-    print(
+    debugPrint(
       'Student UID: $_uid',
     );
 
-    print(
+    debugPrint(
       'Total records: ${records.length}',
     );
 
-    print(
+    debugPrint(
       'Present: $present',
     );
 
-    print(
+    debugPrint(
       'Late: $late',
     );
 
-    print(
+    debugPrint(
       'Absent: $absent',
     );
 
-    print(
+    debugPrint(
       'Leave: $leave',
     );
 
-    print(
+    debugPrint(
       'Attended: $attended',
     );
 
     for (final record in records) {
-      print(
+      debugPrint(
         'DATE: ${record.date} | '
         'BATCH: ${record.batchId} | '
         'STATUS: ${record.status}',
@@ -291,11 +291,11 @@ class AttendanceService {
     final double percentage =
         (attended / records.length) * 100;
 
-    print(
+    debugPrint(
       'Attendance Percentage: $percentage%',
     );
 
-    print(
+    debugPrint(
       '==================================================',
     );
 

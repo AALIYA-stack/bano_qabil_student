@@ -472,7 +472,7 @@ class _InstructorSubmissionsScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -679,7 +679,7 @@ class _InstructorSubmissionsScreenState
       ),
       decoration: BoxDecoration(
         color:
-            AppColors.primary.withOpacity(0.10),
+            AppColors.primary.withValues(alpha: 0.10),
         borderRadius:
             BorderRadius.circular(20),
       ),

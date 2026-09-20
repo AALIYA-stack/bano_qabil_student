@@ -113,6 +113,12 @@ class CoordinatorService {
       throw Exception('Invalid application status.');
     }
 
+    // Read before updating so we can tell whether this is a *new*
+    // acceptance (guards against double-enrolling on repeat taps).
+    final beforeDoc = await _applications.doc(applicationId).get();
+    final beforeData = beforeDoc.data();
+    final wasAccepted = beforeData?['status'] == 'accepted';
+
     await _applications.doc(applicationId).update({
       'status': newStatus,
       'rejectionReason':
@@ -121,6 +127,28 @@ class CoordinatorService {
               : null,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // Newly accepted: enroll the student into the batch so their
+    // Timetable/Attendance/Assignments screens (which read
+    // user.courseId / user.batchId) start working.
+    if (newStatus == 'accepted' && !wasAccepted && beforeData != null) {
+      final studentUid = beforeData['studentId']?.toString() ?? '';
+      final courseId = beforeData['courseId']?.toString() ?? '';
+      final batchId = beforeData['batchId']?.toString() ?? '';
+
+      if (studentUid.isNotEmpty) {
+        await _users.doc(studentUid).set({
+          'courseId': courseId,
+          'batchId': batchId,
+        }, SetOptions(merge: true));
+      }
+
+      if (batchId.isNotEmpty) {
+        await _batches.doc(batchId).update({
+          'enrolledStudents': FieldValue.increment(1),
+        });
+      }
+    }
 
     // Notify the student.
     final appDoc = await _applications.doc(applicationId).get();

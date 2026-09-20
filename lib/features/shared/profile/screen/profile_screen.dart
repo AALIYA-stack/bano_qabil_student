@@ -102,12 +102,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _error = null;
       });
 
-      print('==========================================');
-      print('PROFILE LOADED');
-      print('NAME: ${user.name}');
-      print('EMAIL: ${user.email}');
-      print('PHOTO URL: ${user.photoUrl}');
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('PROFILE LOADED');
+      debugPrint('NAME: ${user.name}');
+      debugPrint('EMAIL: ${user.email}');
+      debugPrint('PHOTO URL: ${user.photoUrl}');
+      debugPrint('==========================================');
     } catch (error) {
       if (!mounted) return;
 
@@ -176,11 +176,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      print('==========================================');
-      print('STARTING PROFILE PHOTO UPDATE');
-      print('UID: ${currentUser.uid}');
-      print('IMAGE SIZE: ${imageBytes.length}');
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('STARTING PROFILE PHOTO UPDATE');
+      debugPrint('UID: ${currentUser.uid}');
+      debugPrint('IMAGE SIZE: ${imageBytes.length}');
+      debugPrint('==========================================');
 
       // --------------------------------------------------------
       // UPLOAD TO FIREBASE STORAGE
@@ -216,10 +216,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? '$uploadedUrl&v=${DateTime.now().millisecondsSinceEpoch}'
           : '$uploadedUrl?v=${DateTime.now().millisecondsSinceEpoch}';
 
-      print('==========================================');
-      print('UPLOADED PHOTO URL');
-      print(photoUrl);
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('UPLOADED PHOTO URL');
+      debugPrint(photoUrl);
+      debugPrint('==========================================');
 
       // --------------------------------------------------------
       // SAVE URL TO FIRESTORE
@@ -245,10 +245,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
 
-      print('==========================================');
-      print('UPDATED USER PROFILE');
-      print('PHOTO URL: ${updatedUser.photoUrl}');
-      print('==========================================');
+      debugPrint('==========================================');
+      debugPrint('UPDATED USER PROFILE');
+      debugPrint('PHOTO URL: ${updatedUser.photoUrl}');
+      debugPrint('==========================================');
 
       setState(() {
         _user = updatedUser;
@@ -260,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      print(
+      debugPrint(
         'PROFILE PHOTO UPDATE ERROR: $error',
       );
 

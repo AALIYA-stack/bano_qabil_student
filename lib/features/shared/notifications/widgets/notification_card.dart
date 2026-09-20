@@ -93,8 +93,8 @@ class NotificationCard extends StatelessWidget {
             border: Border.all(
               color: notification.isRead
                   ? AppColors.border
-                  : AppColors.accent.withOpacity(
-                0.35,
+                  : AppColors.accent.withValues(
+                alpha: 0.35,
               ),
             ),
             boxShadow: const [
@@ -114,7 +114,7 @@ class NotificationCard extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color:
-                  iconColor.withOpacity(0.12),
+                  iconColor.withValues(alpha: 0.12),
                   borderRadius:
                   BorderRadius.circular(14),
                 ),
@@ -202,8 +202,8 @@ class NotificationCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: iconColor
-                                .withOpacity(
-                              0.10,
+                                .withValues(
+                              alpha: 0.10,
                             ),
                             borderRadius:
                             BorderRadius.circular(
