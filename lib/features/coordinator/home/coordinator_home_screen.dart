@@ -11,7 +11,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/coordinator_service.dart';
 import '../applications/screen/applications_inbox_screen.dart';
 import '../batches/screen/batch_management_screen.dart';
-import '../report/screen/coordinator_report_screen.dart';
+import '../../report/screen/coordinator_report_screen.dart';
 import '../notices/screen/post_notice_screen.dart';
 
 /// Coordinator's home tab: a welcome header, live pending-applications
