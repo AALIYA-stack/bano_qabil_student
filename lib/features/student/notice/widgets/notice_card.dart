@@ -65,7 +65,7 @@ class NoticeCard extends StatelessWidget {
             BorderRadius.circular(18),
             border: Border.all(
               color: notice.isImportant
-                  ? color.withOpacity(0.35)
+                  ? color.withValues(alpha: 0.35)
                   : AppColors.border,
             ),
             boxShadow: const [
@@ -85,7 +85,7 @@ class NoticeCard extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color:
-                  color.withOpacity(0.10),
+                  color.withValues(alpha: 0.10),
                   borderRadius:
                   BorderRadius.circular(13),
                 ),

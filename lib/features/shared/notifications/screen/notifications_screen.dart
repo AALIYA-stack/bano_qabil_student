@@ -286,7 +286,7 @@ class _NotificationsScreenState
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white
-                  .withOpacity(0.15),
+                  .withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -321,7 +321,7 @@ class _NotificationsScreenState
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white
-                        .withOpacity(0.85),
+                        .withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -340,7 +340,7 @@ class _NotificationsScreenState
         Axis.horizontal,
         itemCount: _filters.length,
         separatorBuilder:
-            (_, __) =>
+            (_, _) =>
         const SizedBox(width: 8),
         itemBuilder:
             (context, index) {

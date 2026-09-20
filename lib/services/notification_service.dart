@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:flutter/foundation.dart';
 import '../core/constants/collection_names.dart';
 import '../models/notification_model.dart';
 
@@ -47,9 +47,9 @@ class NotificationService {
     try {
       final String uid = _uid;
 
-      print('================================');
-      print('LOADING NOTIFICATIONS');
-      print('CURRENT USER UID: $uid');
+      debugPrint('================================');
+      debugPrint('LOADING NOTIFICATIONS');
+      debugPrint('CURRENT USER UID: $uid');
 
       final QuerySnapshot<Map<String, dynamic>>
       snapshot = await _notifications
@@ -59,7 +59,7 @@ class NotificationService {
       )
           .get();
 
-      print(
+      debugPrint(
         'NOTIFICATIONS FOUND: ${snapshot.docs.length}',
       );
 
@@ -92,15 +92,15 @@ class NotificationService {
         return bDate.compareTo(aDate);
       });
 
-      print('================================');
+      debugPrint('================================');
 
       return notifications;
     } on FirebaseException catch (e) {
-      print('================================');
-      print('NOTIFICATION FIREBASE ERROR');
-      print('CODE: ${e.code}');
-      print('MESSAGE: ${e.message}');
-      print('================================');
+      debugPrint('================================');
+      debugPrint('NOTIFICATION FIREBASE ERROR');
+      debugPrint('CODE: ${e.code}');
+      debugPrint('MESSAGE: ${e.message}');
+      debugPrint('================================');
 
       throw Exception(
         'Unable to load notifications: '
@@ -128,7 +128,7 @@ class NotificationService {
 
       return snapshot.docs.length;
     } on FirebaseException catch (e) {
-      print('Unread count error: ${e.code}');
+      debugPrint('Unread count error: ${e.code}');
 
       throw Exception(
         'Unable to load unread notifications: '

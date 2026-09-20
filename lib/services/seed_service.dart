@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:flutter/foundation.dart';
 import '../data/seed_data/application_seed_data.dart';
 import '../data/seed_data/student_seed_data.dart';
 
@@ -48,10 +48,10 @@ throw Exception(
 );
 }
 
-print('');
-print('Authenticated user: ${user.uid}');
-print('Email: ${user.email ?? 'No email'}');
-print('');
+debugPrint('');
+debugPrint('Authenticated user: ${user.uid}');
+debugPrint('Email: ${user.email ?? 'No email'}');
+debugPrint('');
 }
 
 // ============================================================
@@ -59,84 +59,83 @@ print('');
 // ============================================================
 
 Future<void> seedAll() async {
-print('');
-print('==========================================');
-print('           BANO QABIL SEED');
-print('==========================================');
+debugPrint('');
+debugPrint('==========================================');
+debugPrint('           BANO QABIL SEED');
+debugPrint('==========================================');
 
 try {
 // --------------------------------------------------------
 // AUTH
 // --------------------------------------------------------
 
-print('');
-print('Checking Firebase Authentication...');
+debugPrint('');
+debugPrint('Checking Firebase Authentication...');
 _checkAuthentication();
 
 // --------------------------------------------------------
 // COURSES
 // --------------------------------------------------------
 
-print('');
-print('1. Checking courses...');
+debugPrint('');
+debugPrint('1. Checking courses...');
 await _checkCourses();
 
 // --------------------------------------------------------
 // CAMPUSES
 // --------------------------------------------------------
 
-print('');
-print('2. Checking campuses...');
+debugPrint('');
+debugPrint('2. Checking campuses...');
 await _checkCampuses();
 
 // --------------------------------------------------------
 // BATCHES
 // --------------------------------------------------------
 
-print('');
-print('3. Checking batches...');
+debugPrint('');
+debugPrint('3. Checking batches...');
 await _checkBatches();
 
 // --------------------------------------------------------
 // STUDENTS
 // --------------------------------------------------------
 
-print('');
-print('4. Seeding students...');
+debugPrint('');
+debugPrint('4. Seeding students...');
 await seedStudents();
 
 // --------------------------------------------------------
 // APPLICATIONS
 // --------------------------------------------------------
 
-print('');
-print('5. Seeding applications...');
+debugPrint('');
+debugPrint('5. Seeding applications...');
 await seedApplications();
 
 // --------------------------------------------------------
 // SUCCESS
 // --------------------------------------------------------
 
-print('');
-print('==========================================');
-print('       SEED COMPLETED SUCCESSFULLY');
-print('==========================================');
-print('');
+debugPrint('');
+debugPrint('==========================================');
+debugPrint('       SEED COMPLETED SUCCESSFULLY');
+debugPrint('==========================================');
+debugPrint('');
 } catch (e, stackTrace) {
-print('');
-print('==========================================');
-print('             SEED FAILED');
-print('==========================================');
+debugPrint('');
+debugPrint('==========================================');
+debugPrint('             SEED FAILED');
+debugPrint('==========================================');
 
-print('');
-print('Error: $e');
+debugPrint('');
+debugPrint('Error: $e');
 
-print('');
-print('StackTrace:');
-print(stackTrace);
-
-print('');
-print('==========================================');
+debugPrint('');
+debugPrint('StackTrace:');
+debugPrint(stackTrace.toString());
+debugPrint('');
+debugPrint('==========================================');
 
 rethrow;
 }
@@ -185,7 +184,7 @@ SetOptions(merge: true),
 
 count++;
 
-print(
+debugPrint(
 'Student prepared: $id '
 '→ ${student['name']} '
 '| course: ${student['courseId']} '
@@ -201,8 +200,8 @@ if (count > 0) {
 await batch.commit();
 }
 
-print('');
-print('Students seeded successfully: $count');
+debugPrint('');
+debugPrint('Students seeded successfully: $count');
 
 // ----------------------------------------------------------
 // UPDATE BATCH ENROLLMENT
@@ -218,9 +217,9 @@ await _updateStudentBatchEnrollment();
 Future<void> _updateStudentBatchEnrollment() async {
 const String batchId = 'flutter-batch-01';
 
-print('');
-print('Updating batch enrollment...');
-print('Batch: $batchId');
+debugPrint('');
+debugPrint('Updating batch enrollment...');
+debugPrint('Batch: $batchId');
 
 final DocumentReference<Map<String, dynamic>> batchRef =
 _batches.doc(batchId);
@@ -229,7 +228,7 @@ final DocumentSnapshot<Map<String, dynamic>> batchSnapshot =
 await batchRef.get();
 
 if (!batchSnapshot.exists) {
-print(
+debugPrint(
 'WARNING: Batch $batchId was not found.',
 );
 
@@ -271,16 +270,16 @@ await batchRef.set(
 SetOptions(merge: true),
 );
 
-print('');
-print('==========================================');
-print('        BATCH ENROLLMENT UPDATED');
-print('==========================================');
-print('Batch ID: $batchId');
-print('Total Seats: $seats');
-print('Enrolled Students: $enrolledStudents');
-print('Seats Left: $seatsLeft');
-print('==========================================');
-print('');
+debugPrint('');
+debugPrint('==========================================');
+debugPrint('        BATCH ENROLLMENT UPDATED');
+debugPrint('==========================================');
+debugPrint('Batch ID: $batchId');
+debugPrint('Total Seats: $seats');
+debugPrint('Enrolled Students: $enrolledStudents');
+debugPrint('Seats Left: $seatsLeft');
+debugPrint('==========================================');
+debugPrint('');
 }
 
 // ============================================================
@@ -335,7 +334,7 @@ SetOptions(merge: true),
 
 count++;
 
-print(
+debugPrint(
 'Application prepared: $id '
 '→ ${application['fullName']} '
 '| course: ${application['courseId']} '
@@ -348,8 +347,8 @@ if (count > 0) {
 await batch.commit();
 }
 
-print('');
-print(
+debugPrint('');
+debugPrint(
 'Applications seeded successfully: $count',
 );
 }
@@ -362,12 +361,12 @@ Future<void> _checkCourses() async {
 final QuerySnapshot<Map<String, dynamic>> snapshot =
 await _courses.get();
 
-print(
+debugPrint(
 'Courses found: ${snapshot.docs.length}',
 );
 
 if (snapshot.docs.isEmpty) {
-print(
+debugPrint(
 'WARNING: No courses found in Firestore.',
 );
 return;
@@ -385,7 +384,7 @@ data['name'] ??
 final dynamic isActive =
 data['isActive'] ?? false;
 
-print(
+debugPrint(
 'Course: ${doc.id} '
 '| $title '
 '| isActive: $isActive',
@@ -401,12 +400,12 @@ Future<void> _checkCampuses() async {
 final QuerySnapshot<Map<String, dynamic>> snapshot =
 await _campuses.get();
 
-print(
+debugPrint(
 'Campuses found: ${snapshot.docs.length}',
 );
 
 if (snapshot.docs.isEmpty) {
-print(
+debugPrint(
 'WARNING: No campuses found in Firestore.',
 );
 return;
@@ -425,7 +424,7 @@ data['city'] ?? '';
 final dynamic isActive =
 data['isActive'] ?? false;
 
-print(
+debugPrint(
 'Campus: ${doc.id} '
 '| $name '
 '| city: $city '
@@ -442,12 +441,12 @@ Future<void> _checkBatches() async {
 final QuerySnapshot<Map<String, dynamic>> snapshot =
 await _batches.get();
 
-print(
+debugPrint(
 'Batches found: ${snapshot.docs.length}',
 );
 
 if (snapshot.docs.isEmpty) {
-print(
+debugPrint(
 'WARNING: No batches found in Firestore.',
 );
 return;
@@ -479,7 +478,7 @@ data['seatsLeft'] != null
 ? seats - enrolled
     : 0);
 
-print(
+debugPrint(
 'Batch: ${doc.id} '
 '| courseId: $courseId '
 '| campusId: $campusId '
@@ -496,21 +495,21 @@ print(
 // ============================================================
 
 Future<void> seedOnlyStudents() async {
-print('');
-print('==========================================');
-print('        STUDENT SEED STARTED');
-print('==========================================');
+debugPrint('');
+debugPrint('==========================================');
+debugPrint('        STUDENT SEED STARTED');
+debugPrint('==========================================');
 
 try {
 _checkAuthentication();
 
 await seedStudents();
 
-print('');
-print('Student seed completed successfully.');
+debugPrint('');
+debugPrint('Student seed completed successfully.');
 } catch (e) {
-print('');
-print('Student seed failed: $e');
+debugPrint('');
+debugPrint('Student seed failed: $e');
 rethrow;
 }
 }
@@ -519,26 +518,30 @@ rethrow;
 // SEED ONLY APPLICATIONS
 // ============================================================
 
+// ============================================================
+// SEED ONLY APPLICATIONS
+// ============================================================
+
 Future<void> seedOnlyApplications() async {
-print('');
-print('==========================================');
-print('      APPLICATION SEED STARTED');
-print('==========================================');
+  debugPrint('');
+  debugPrint('==========================================');
+  debugPrint('      APPLICATION SEED STARTED');
+  debugPrint('==========================================');
 
-try {
-_checkAuthentication();
+  try {
+    _checkAuthentication();
 
-await seedApplications();
+    await seedApplications();
 
-print('');
-print(
-'Application seed completed successfully.',
-);
-} catch (e) {
-print('');
-print('Application seed failed: $e');
-rethrow;
-}
+    debugPrint('');
+    debugPrint(
+      'Application seed completed successfully.',
+    );
+  } catch (e) {
+    debugPrint('');
+    debugPrint('Application seed failed: $e');
+    rethrow;
+  }
 }
 
 // ============================================================
@@ -563,7 +566,7 @@ _users.doc(id),
 
 count++;
 
-print(
+debugPrint(
 'Student marked for deletion: $id',
 );
 }
@@ -572,8 +575,8 @@ if (count > 0) {
 await batch.commit();
 }
 
-print('');
-print(
+debugPrint('');
+debugPrint(
 'Demo students deleted: $count',
 );
 
@@ -606,7 +609,7 @@ _applications.doc(id),
 
 count++;
 
-print(
+debugPrint(
 'Application marked for deletion: $id',
 );
 }
@@ -615,8 +618,8 @@ if (count > 0) {
 await batch.commit();
 }
 
-print('');
-print(
+debugPrint('');
+debugPrint(
 'Demo applications deleted: $count',
 );
 }
@@ -625,33 +628,36 @@ print(
 // DELETE ALL DEMO DATA
 // ============================================================
 
+// ============================================================
+// DELETE ALL DEMO DATA
+// ============================================================
+
 Future<void> deleteSeedData() async {
-print('');
-print('==========================================');
-print('       DELETE DEMO DATA STARTED');
-print('==========================================');
+  debugPrint('');
+  debugPrint('==========================================');
+  debugPrint('      DELETE DEMO DATA STARTED');
+  debugPrint('==========================================');
 
-try {
-_checkAuthentication();
+  try {
+    _checkAuthentication();
 
-print('');
-print('Deleting demo students...');
-await deleteSeedStudents();
+    debugPrint('');
+    debugPrint('Deleting demo students...');
+    await deleteSeedStudents();
 
-print('');
-print('Deleting demo applications...');
-await deleteSeedApplications();
+    debugPrint('');
+    debugPrint('Deleting demo applications...');
+    await deleteSeedApplications();
 
-print('');
-print('==========================================');
-print('       DEMO DATA DELETED');
-print('==========================================');
-print('');
-} catch (e) {
-print('');
-print('Delete seed data failed: $e');
-rethrow;
+    debugPrint('');
+    debugPrint('==========================================');
+    debugPrint('      DEMO DATA DELETED');
+    debugPrint('==========================================');
+    debugPrint('');
+  } catch (e) {
+    debugPrint('');
+    debugPrint('Delete seed data failed: $e');
+    rethrow;
+  }
 }
 }
-}
-

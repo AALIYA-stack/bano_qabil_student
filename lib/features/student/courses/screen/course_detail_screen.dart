@@ -42,10 +42,10 @@ class _CourseDetailScreenState
   // ============================================================
 
   Future<List<_BatchOption>> _loadBatchOptions() async {
-    print('========================================');
-    print('LOADING BATCH OPTIONS');
-    print('COURSE ID FROM SCREEN: ${widget.course.id}');
-    print('COURSE NAME: ${widget.course.name}');
+    debugPrint('========================================');
+    debugPrint('LOADING BATCH OPTIONS');
+  debugPrint('COURSE ID FROM SCREEN: ${widget.course.id}');
+    debugPrint('COURSE NAME: ${widget.course.name}');
 
     try {
       final batches =
@@ -53,31 +53,31 @@ class _CourseDetailScreenState
         widget.course.id,
       );
 
-      print('BATCHES RECEIVED: ${batches.length}');
+      debugPrint('BATCHES RECEIVED: ${batches.length}');
 
       final List<_BatchOption> result = [];
 
       for (final batch in batches) {
-        print('----------------------------------------');
-        print('CHECKING BATCH');
-        print('Batch ID: ${batch.id}');
-        print('Course ID: ${batch.courseId}');
-        print('Campus ID: ${batch.campusId}');
-        print('Is Open: ${batch.isOpen}');
-        print('Seats: ${batch.seats}');
-        print('Enrolled: ${batch.enrolledStudents}');
-        print('Seats Left: ${batch.seatsLeft}');
+        debugPrint('----------------------------------------');
+        debugPrint('CHECKING BATCH');
+        debugPrint('Batch ID: ${batch.id}');
+        debugPrint('Course ID: ${batch.courseId}');
+        debugPrint('Campus ID: ${batch.campusId}');
+        debugPrint('Is Open: ${batch.isOpen}');
+        debugPrint('Seats: ${batch.seats}');
+        debugPrint('Enrolled: ${batch.enrolledStudents}');
+        debugPrint('Seats Left: ${batch.seatsLeft}');
 
         // --------------------------------------------------------
         // CHECK CAMPUS ID
         // --------------------------------------------------------
 
         if (batch.campusId.trim().isEmpty) {
-          print('❌ CAMPUS ID IS EMPTY');
+          debugPrint('❌ CAMPUS ID IS EMPTY');
           continue;
         }
 
-        print(
+        debugPrint(
           'Getting campus by ID: ${batch.campusId}',
         );
 
@@ -95,7 +95,7 @@ class _CourseDetailScreenState
         // --------------------------------------------------------
 
         if (campus == null) {
-          print(
+          debugPrint(
             '❌ CAMPUS NOT FOUND: ${batch.campusId}',
           );
           continue;
@@ -105,12 +105,12 @@ class _CourseDetailScreenState
         // CAMPUS FOUND
         // --------------------------------------------------------
 
-        print('✅ CAMPUS FOUND');
-        print('Campus ID: ${campus.id}');
-        print('Campus Name: ${campus.name}');
-        print('Campus City: ${campus.city}');
-        print('Campus Province: ${campus.province}');
-        print('Campus Active: ${campus.isActive}');
+        debugPrint('✅ CAMPUS FOUND');
+        debugPrint('Campus ID: ${campus.id}');
+        debugPrint('Campus Name: ${campus.name}');
+        debugPrint('Campus City: ${campus.city}');
+        debugPrint('Campus Province: ${campus.province}');
+        debugPrint('Campus Active: ${campus.isActive}');
 
         // --------------------------------------------------------
         // ADD BATCH OPTION
@@ -123,21 +123,21 @@ class _CourseDetailScreenState
           ),
         );
 
-        print('✅ BATCH ADDED TO RESULT');
+        debugPrint('✅ BATCH ADDED TO RESULT');
       }
 
-      print('----------------------------------------');
-      print(
+      debugPrint('----------------------------------------');
+      debugPrint(
         'FINAL BATCH OPTIONS: ${result.length}',
       );
 
       if (result.isEmpty) {
-        print('❌ NO BATCH OPTIONS AVAILABLE');
+        debugPrint('❌ NO BATCH OPTIONS AVAILABLE');
       } else {
-        print('✅ BATCH OPTIONS AVAILABLE');
+        debugPrint('✅ BATCH OPTIONS AVAILABLE');
 
         for (final option in result) {
-          print(
+          debugPrint(
             'OPTION: '
                 '${option.batch.id} | '
                 'Course: ${option.batch.courseId} | '
@@ -146,15 +146,15 @@ class _CourseDetailScreenState
         }
       }
 
-      print('========================================');
+      debugPrint('========================================');
 
       return result;
     } catch (e, stackTrace) {
-      print('========================================');
-      print('❌ ERROR LOADING BATCH OPTIONS');
-      print('ERROR: $e');
-      print('STACK TRACE: $stackTrace');
-      print('========================================');
+      debugPrint('========================================');
+      debugPrint('❌ ERROR LOADING BATCH OPTIONS');
+      debugPrint('ERROR: $e');
+      debugPrint('STACK TRACE: $stackTrace');
+      debugPrint('========================================');
 
       rethrow;
     }
@@ -416,7 +416,7 @@ class _CourseDetailScreenState
                   // ------------------------------------------------
 
                   if (snapshot.hasError) {
-                    print(
+                    debugPrint(
                       '❌ FUTURE BUILDER ERROR: '
                           '${snapshot.error}',
                     );

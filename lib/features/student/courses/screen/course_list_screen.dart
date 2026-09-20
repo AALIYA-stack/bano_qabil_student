@@ -193,7 +193,7 @@ class _CourseListScreenState
                     itemCount:
                     courses.length,
                     separatorBuilder:
-                        (_, __) =>
+                        (_, _) =>
                     const SizedBox(
                       height: 14,
                     ),

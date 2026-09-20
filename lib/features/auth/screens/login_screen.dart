@@ -324,7 +324,7 @@ class _LoginScreenState extends State<LoginScreen>
       child: Image.asset(
         'assets/images/bano_qabil_logo.png',
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) {
+        errorBuilder: (_,_, _) {
           return const Icon(
             Icons.school_rounded,
             color: AppColors.primary,

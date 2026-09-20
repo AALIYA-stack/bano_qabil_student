@@ -272,7 +272,7 @@ class _AssignmentsScreenState
         ),
         itemCount: _assignments.length,
         separatorBuilder:
-            (_, __) =>
+            (_, _) =>
         const SizedBox(height: 12),
         itemBuilder:
             (context, index) {

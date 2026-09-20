@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter/foundation.dart';
 import '../core/constants/collection_names.dart';
 import '../models/batch_model.dart';
 
@@ -23,9 +23,9 @@ class BatchService {
     try {
       final cleanCourseId = courseId.trim();
 
-      print('========================================');
-      print('GETTING BATCHES FOR COURSE');
-      print('COURSE ID FROM APP: $cleanCourseId');
+      debugPrint('========================================');
+      debugPrint('GETTING BATCHES FOR COURSE');
+      debugPrint('COURSE ID FROM APP: $cleanCourseId');
 
       // Pehle sirf open batches get kar rahe hain.
       // courseId ka filter Dart mein karenge taake
@@ -38,7 +38,7 @@ class BatchService {
       )
           .get();
 
-      print(
+      debugPrint(
         'TOTAL OPEN BATCHES FROM FIREBASE: '
             '${snapshot.docs.length}',
       );
@@ -49,7 +49,7 @@ class BatchService {
         try {
           final batch = BatchModel.fromFirestore(doc);
 
-          print(
+          debugPrint(
             'BATCH: ${batch.id} | '
                 'courseId: ${batch.courseId} | '
                 'campusId: ${batch.campusId} | '
@@ -76,22 +76,22 @@ class BatchService {
 
           batches.add(batch);
         } catch (e) {
-          print(
+          debugPrint(
             'ERROR READING BATCH ${doc.id}: $e',
           );
         }
       }
 
-      print(
+      debugPrint(
         'MATCHED BATCHES FOR $cleanCourseId: '
             '${batches.length}',
       );
 
-      print('========================================');
+      debugPrint('========================================');
 
       return batches;
     } catch (e) {
-      print(
+      debugPrint(
         'ERROR LOADING BATCHES FOR COURSE '
             '$courseId: $e',
       );
@@ -153,7 +153,7 @@ Future<List<BatchModel>> getBatchesForInstructor(
 
       return BatchModel.fromFirestore(doc);
     } catch (e) {
-      print(
+      debugPrint(
         'ERROR LOADING BATCH $batchId: $e',
       );
 
