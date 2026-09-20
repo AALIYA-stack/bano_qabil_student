@@ -268,12 +268,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _cleanError(error),
       );
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isUploadingPhoto = false;
-      });
-    }
+  if (mounted) {
+    setState(() {
+      _isUploadingPhoto = false;
+    });
+  }
+}
   }
 
   // ============================================================
@@ -704,9 +704,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }
 
                           if (saved) {
-                            Navigator.of(
-                              sheetContext,
-                            ).pop();
+  if (!sheetContext.mounted) {
+    return;
+  }
+
+  Navigator.of(
+    sheetContext,
+  ).pop();
 
                             _showMessage(
                               'Profile updated successfully.',
