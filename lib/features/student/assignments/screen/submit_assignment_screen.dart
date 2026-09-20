@@ -49,76 +49,70 @@ class _SubmitAssignmentScreenState
   // PICK FILE
   // ============================================================
 
-  Future<void> _pickFile() async {
-    try {
-      final FilePickerResult? result =
-      await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: [
-          'jpg',
-          'jpeg',
-          'png',
-          'webp',
-          'pdf',
-          'doc',
-          'docx',
-          'ppt',
-          'pptx',
-          'xls',
-          'xlsx',
-          'txt',
-          'zip',
-        ],
-        withData: true,
-      );
+Future<void> _pickFile() async {
+  try {
+    final List<PlatformFile> files =
+        await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+        'pdf',
+        'doc',
+        'docx',
+        'ppt',
+        'pptx',
+        'xls',
+        'xlsx',
+        'txt',
+        'zip',
+      ],
+    );
 
-      if (result == null ||
-          result.files.isEmpty) {
-        return;
-      }
+    if (files.isEmpty) {
+      return;
+    }
 
-      final PlatformFile file =
-          result.files.first;
+    final PlatformFile file = files.first;
 
-      final Uint8List? bytes = file.bytes;
+    final Uint8List bytes = await file.readAsBytes();
 
-      if (bytes == null ||
-          bytes.isEmpty) {
-        _showMessage(
-          'Unable to read the selected file.',
-          isError: true,
-        );
-        return;
-      }
-
-      // Maximum 10 MB
-      const int maxSize =
-          10 * 1024 * 1024;
-
-      if (bytes.length > maxSize) {
-        _showMessage(
-          'File size must be 10 MB or less.',
-          isError: true,
-        );
-        return;
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _fileBytes = bytes;
-        _fileName = file.name;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
+    if (bytes.isEmpty) {
       _showMessage(
-        'Unable to select file.',
+        'Unable to read the selected file.',
         isError: true,
       );
+      return;
     }
-  }
 
+    // Maximum 10 MB
+    const int maxSize = 10 * 1024 * 1024;
+
+    if (bytes.length > maxSize) {
+      _showMessage(
+        'File size must be 10 MB or less.',
+        isError: true,
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _fileBytes = bytes;
+      _fileName = file.name;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    _showMessage(
+      'Unable to select file.',
+      isError: true,
+    );
+  }
+}
   // ============================================================
   // SUBMIT
   // ============================================================
@@ -131,7 +125,7 @@ class _SubmitAssignmentScreenState
     }
 
     final String answer =
-    _answerController.text.trim();
+        _answerController.text.trim();
 
     if (answer.isEmpty &&
         _fileBytes == null) {
@@ -148,8 +142,8 @@ class _SubmitAssignmentScreenState
 
     try {
       final String submissionId =
-      await SubmissionService.instance
-          .submitAssignment(
+          await SubmissionService.instance
+              .submitAssignment(
         assignment: widget.assignment,
         batchId: widget.batchId,
         answerText: answer,
@@ -180,6 +174,7 @@ class _SubmitAssignmentScreenState
       }
     }
   }
+
 
   // ============================================================
   // SUCCESS DIALOG

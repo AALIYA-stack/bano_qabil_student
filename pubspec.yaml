@@ -31,7 +31,7 @@
 
                 # Images & Files
                 cached_network_image: ^3.3.1
-                file_picker: ^8.1.7
+                file_picker: 13.1.0
                 image_picker: ^1.1.2
 
                 # UI Components
