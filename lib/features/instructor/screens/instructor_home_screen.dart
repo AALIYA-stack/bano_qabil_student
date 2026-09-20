@@ -12,6 +12,7 @@ import '../../student/attendence/screen/attendance_screen.dart';
 import 'create_assignment_screen.dart';
 import 'instructor_submissions_screen.dart';
 import 'instructor_attendance_screen.dart';
+import 'instructor_profile_screen.dart';
 
 class InstructorHomeScreen extends StatefulWidget {
   const InstructorHomeScreen({super.key});
@@ -92,7 +93,7 @@ class _InstructorHomeScreenState extends State<InstructorHomeScreen> {
           _buildDashboard(),
           const InstructorAttendanceScreen(),
           _buildPlaceholder('Assignments'),
-          _buildPlaceholder('Profile'),
+          const InstructorProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
